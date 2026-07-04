@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { initializeApp } from "firebase/app";
-// 📝 Realtime Database සඳහා අවශ්‍ය කොටස් Import කරගැනීම
 import { getDatabase, ref, set, get } from "firebase/database"; 
 
 const firebaseConfig = {
@@ -12,7 +11,6 @@ const firebaseConfig = {
   appId: "1:3452723447:web:d91b83e92a14d481b6b3f2"
 };
 
-// Firebase සහ Realtime Database Initialize කිරීම
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app); 
 
@@ -59,21 +57,16 @@ export default function App() {
 
   // 💾 App State Initialize
   const [allPlans, setAllPlans] = useState({
-    trader1: [],
-    trader2: [],
-    trader3: [],
-    trader4: [],
-    trader5: []
+    trader1: [], trader2: [], trader3: [], trader4: [], trader5: []
   });
 
   const [isLoadingData, setIsLoadingData] = useState(false);
 
-  // 🔁 1. AUTO-SAVE LOOP (Realtime Database Version)
+  // 🔁 1. AUTO-SAVE LOOP
   useEffect(() => {
     const saveToFirebase = async () => {
       if (currentUser && isAuthenticated) {
         try {
-          // Firebase එකේ compoundpro_vault/traderId කියන path එකට සේව් කරයි
           const userRef = ref(db, "compoundpro_vault/" + currentUser.id);
           await set(userRef, allPlans);
         } catch (error) {
@@ -81,7 +74,6 @@ export default function App() {
         }
       }
     };
-
     saveToFirebase();
   }, [allPlans, currentUser, isAuthenticated]);
 
@@ -94,13 +86,13 @@ export default function App() {
 
   // Form Creation Inputs
   const [planName, setPlanName] = useState('');
-  const [initialBalance, setInitialBalance] = useState(100);
+  // 📝 Decimal values (100.11 වගේ) දාන්න පුළුවන් වෙන්න String එකක් විදිහට මුලින් තියාගන්නවා
+  const [initialBalance, setInitialBalance] = useState('100');
   const [riskPercent, setRiskPercent] = useState(20); 
   const rewardRatio = 2; 
 
   const currentTraderPlans = currentUser ? (allPlans[currentUser.id] || []) : [];
 
-  // Active Plan එක වෙනස් වන විට History සහ Withdrawals අප්ඩේට් කරගැනීම
   useEffect(() => {
     if (activePlan) {
       setTradesHistory(activePlan.tradesHistory || []);
@@ -116,7 +108,7 @@ export default function App() {
     setCustomAlert(prev => ({ ...prev, isOpen: false }));
   };
 
-  // --- 📥 DATA EXPORT METHOD LOOP FUNCTION ---
+  // --- 📥 DATA EXPORT METHOD ---
   const handleExportSessionCSV = () => {
     if (!activePlan || tradesHistory.length === 0) {
       triggerPopupAlert('No Data', 'There are no closed trade logs inside this active session to export yet!', 'warning');
@@ -142,7 +134,7 @@ export default function App() {
     triggerPopupAlert('Exported!', 'Your session history log file has been downloaded successfully as a spreadsheet CSV file.', 'success');
   };
 
-  // 📥 2. FETCH DATA LOOP (Realtime Database Version)
+  // 📥 2. FETCH DATA LOOP ON LOGIN
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setLoginError('');
@@ -155,24 +147,19 @@ export default function App() {
         const snapshot = await get(userRef);
 
         if (snapshot.exists()) {
-          // Realtime database එකේ data තිබේ නම් .val() මගින් ලබා ගනී
           setAllPlans(snapshot.val());
         } else {
-          // අලුත්ම User කෙනෙක් නම් හිස් array එකක් සාදයි
-          setAllPlans(prev => ({
-            ...prev,
-            [matchedProfile.id]: []
-          }));
+          setAllPlans(prev => ({ ...prev, [matchedProfile.id]: [] }));
         }
 
         setCurrentUser(matchedProfile);
         setIsAuthenticated(true);
         setView('dashboard');
-        setInitialBalance(matchedProfile.initial);
+        setInitialBalance(matchedProfile.initial.toString()); // Decimal friendly
         setPasswordInput('');
       } catch (error) {
         console.error("Firebase Realtime DB fetch error: ", error);
-        setLoginError('Database එකට සම්බන්ධ වෙන්න බැරි වුණා. කරුණාකර නැවත උත්සාහ කරන්න.');
+        setLoginError('Database එකට සම්බන්ධ වෙන්න බැරි වුණා.');
       } finally {
         setIsLoadingData(false);
       }
@@ -192,11 +179,14 @@ export default function App() {
 
   const handleCreatePlan = (e) => {
     e.preventDefault();
+    // 📝 Number() වෙනුවට parseFloat() දාලා දශමස්ථාන (Decimal) නිවැරදිව ගණනය කරනවා
+    const parsedInitial = parseFloat(initialBalance);
+    
     const newPlan = {
       id: Date.now(),
       name: planName || `Trading Plan ${currentTraderPlans.length + 1}`,
-      initialBalance: Number(initialBalance),
-      currentBalance: Number(initialBalance),
+      initialBalance: parsedInitial,
+      currentBalance: parsedInitial,
       riskPercent: Number(riskPercent),
       rewardRatio: rewardRatio,
       status: 'Active',
@@ -231,7 +221,9 @@ export default function App() {
     } else if (status === 'Loss') {
       payout = -riskAmount;
     }
-    const newEndingBalance = currentBalance + payout;
+    
+    // JS Floating point issue එක මඟහරවා ගන්න දශමස්ථාන 2කට සෙට් කරනවා
+    const newEndingBalance = Math.round((currentBalance + payout) * 100) / 100;
     
     const loggedTrade = {
       id: Date.now(),
@@ -252,7 +244,6 @@ export default function App() {
     };
     
     setActivePlan(updatedPlan);
-
     setAllPlans(prev => ({
       ...prev,
       [currentUser.id]: prev[currentUser.id].map(p => p.id === activePlan.id ? updatedPlan : p)
@@ -262,12 +253,13 @@ export default function App() {
 
   const handleWithdraw = (e) => {
     e.preventDefault();
-    const amount = Number(withdrawalInput);
+    // 📝 Withdrawal වලටත් දශම අගයන් ගන්න පුළුවන් වෙන්න parseFloat දානවා
+    const amount = parseFloat(withdrawalInput);
     if (!amount || amount <= 0 || amount > activePlan.currentBalance) {
       triggerPopupAlert('Balance Low', "You do not have enough money in your current account to withdraw this amount!", 'warning');
       return;
     }
-    const newBalance = activePlan.currentBalance - amount;
+    const newBalance = Math.round((activePlan.currentBalance - amount) * 100) / 100;
     const newWithdrawal = {
       id: Date.now(),
       amount: amount,
@@ -282,7 +274,6 @@ export default function App() {
     };
     
     setActivePlan(updatedPlan);
-
     setAllPlans(prev => ({
       ...prev,
       [currentUser.id]: prev[currentUser.id].map(p => p.id === activePlan.id ? updatedPlan : p)
@@ -302,10 +293,7 @@ export default function App() {
           [currentUser.id]: prev[currentUser.id].filter(p => p.id !== id)
         }));
         if (activePlan?.id === id) {
-          setActivePlan(null);
-          setTradesHistory([]);
-          setWithdrawals([]);
-          setView('dashboard');
+          setActivePlan(null); setTradesHistory([]); setWithdrawals([]); setView('dashboard');
         }
       }
     );
@@ -351,7 +339,8 @@ export default function App() {
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 10.5V6.75a4.5 4.5 0 1 1 9 0v3.75M3.75 21.75h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H3.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>
             </div>
             <h2 style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-xl font-bold text-[#0F172A] tracking-tight">CompoundPro</h2>
-            <p className="text-sm text-[#64748B] mt-1">Type your password to enter</p>
+            {/* 📝 "Welcome to the real trading." ටෙක්ස්ට් එක මෙතනට ඇතුළත් කරා */}
+            <p className="text-sm font-bold text-[#047857] mt-1 bg-[#E6F4EA] px-3 py-1 rounded-lg w-fit mx-auto border border-[#A7F3D0]">Welcome to the real trading.</p>
           </div>
 
           {loginError && (
@@ -533,7 +522,8 @@ export default function App() {
                   <span className="text-xs text-[#64748B] block font-bold uppercase tracking-wider">Total Money</span>
                   <div className="text-[#047857]"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818.736.156A3.976 3.976 0 0 0 12 15.399c1.917 0 3.5-1.423 3.5-3.17 0-1.747-1.583-3.17-3.5-3.17-1.737 0-3.185-1.173-3.418-2.735L8.5 6m3.5-1.818.675.143A3.976 3.976 0 0 1 15.5 7.159c0 1.748-1.583 3.17-3.5 3.17-1.737 0-3.185 1.172-3.418 2.734L8.5 13" /></svg></div>
                 </div>
-                <span style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-3xl font-bold text-[#047857] mt-2">${currentTraderPlans.reduce((sum, p) => sum + p.currentBalance, 0).toLocaleString()}</span>
+                {/* 📝 Total balance එකත් .toFixed(2) මගින් දශම ලස්සනට පෙන්වයි */}
+                <span style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-3xl font-bold text-[#047857] mt-2">${currentTraderPlans.reduce((sum, p) => sum + p.currentBalance, 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
               </div>
             </div>
 
@@ -569,7 +559,8 @@ export default function App() {
                             <span className="text-xs px-3 py-1 rounded-lg font-bold bg-[#E6F4EA] text-[#065F46]">{plan.riskPercent}% Risk</span>
                           </td>
                           <td className="p-4 md:p-5 text-xs text-[#64748B] font-bold">Stable 1:2 Plan</td>
-                          <td className="p-4 md:p-5 text-[#64748B]">${plan.initialBalance}</td>
+                          {/* 📝 දශමස්ථාන 2ක් හරියටම පෙන්වයි */}
+                          <td className="p-4 md:p-5 text-[#64748B]">${plan.initialBalance.toFixed(2)}</td>
                           <td className="p-4 md:p-5 font-bold text-[#047857]">${plan.currentBalance.toFixed(2)}</td>
                           <td className="p-4 md:p-5 text-right flex justify-end gap-2.5">
                             <button onClick={() => handleLaunchRadar(plan)} style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-[10px] font-black bg-[#E6F4EA] text-[#065F46] px-4 py-2 rounded-xl flex items-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" /></svg>Open Plan</button>
@@ -596,7 +587,8 @@ export default function App() {
               </div>
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] mb-2">Starting Money ($)</label>
-                <input type="number" value={initialBalance} onChange={(e) => setInitialBalance(e.target.value)} className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3.5 text-base focus:outline-none focus:border-[#10B981] text-[#0F172A]" min="10" required />
+                {/* 📝 step="any" දාලා තියෙන නිසා 100.11 වගේ ඕනෑම දශම අගයක් Type කරන්න දෙනවා */}
+                <input type="number" step="any" value={initialBalance} onChange={(e) => setInitialBalance(e.target.value)} className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3.5 text-base focus:outline-none focus:border-[#10B981] text-[#0F172A]" min="1" required />
               </div>
               <div className="bg-[#F8FAFC] p-5 rounded-xl border border-[#E2E8F0] space-y-3">
                 <div className="flex justify-between items-center text-xs font-bold uppercase tracking-wider text-[#64748B]">
@@ -642,7 +634,7 @@ export default function App() {
               <div className="grid grid-cols-3 gap-3 md:gap-4">
                 <div className="bg-white border border-[#E2E8F0] p-4 rounded-2xl text-center shadow-xs">
                   <span className="text-[10px] md:text-xs text-[#64748B] font-bold uppercase block mb-1">Starting Money</span>
-                  <span style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-sm md:text-base font-bold text-[#0F172A]">${activePlan.initialBalance}</span>
+                  <span style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-sm md:text-base font-bold text-[#0F172A]">${activePlan.initialBalance.toFixed(2)}</span>
                 </div>
                 <div className="bg-white border border-[#E2E8F0] p-4 rounded-2xl text-center shadow-xs border-b-4 border-b-[#10B981]">
                   <span className="text-[10px] md:text-xs text-[#64748B] font-bold uppercase block mb-1">Current Money</span>
@@ -767,7 +759,8 @@ export default function App() {
                 <h3 style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-xs font-bold text-[#0F172A] uppercase mb-3 flex items-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-4 h-4 text-[#047857]"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-5.625 3.512A2.25 2.25 0 0 1 2.25 18V6M21.75 18.25a2.25 2.25 0 0 1-2.25 2.25H4.5M21.75 18V6c0-.98-.79-1.75-1.75-1.75H4.5" /></svg>Withdraw Money</h3>
                 {activePlan.status === 'Active' ? (
                   <form onSubmit={handleWithdraw} className="space-y-3">
-                    <input type="number" value={withdrawalInput} onChange={(e) => setWithdrawalInput(e.target.value)} placeholder="Amount to withdraw ($)" className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3 text-sm font-semibold text-[#0F172A]" min="1" max={activePlan.currentBalance} />
+                    {/* 📝 Withdrawal input එකටත් step="any" එකතු කරා දශම withdraw කරන්න */}
+                    <input type="number" step="any" value={withdrawalInput} onChange={(e) => setWithdrawalInput(e.target.value)} placeholder="Amount to withdraw ($)" className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3 text-sm font-semibold text-[#0F172A]" min="0.01" max={activePlan.currentBalance} />
                     <button type="submit" style={{ fontFamily: '"Unbounded", sans-serif' }} className="w-full py-2.5 bg-[#047857] text-white font-bold text-[10px] uppercase tracking-wider rounded-xl shadow-xs transition flex items-center justify-center gap-1"><svg xmlns="http://www.w3.org/2000/xl" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>Confirm Withdrawal</button>
                   </form>
                 ) : (
@@ -780,7 +773,7 @@ export default function App() {
                   ) : (
                     <div className="space-y-2 max-h-40 overflow-y-auto">
                       {withdrawals.map((w) => (
-                        <div key={w.id} className="bg-[#F8FAFC] p-3 rounded-xl border border-[#E2E8F0] text-xs font-bold flex justify-between items-center"><span className="text-[#B45309]">-${w.amount}</span><span className="text-[10px] text-[#94A3B8] font-mono">{w.timestamp}</span></div>
+                        <div key={w.id} className="bg-[#F8FAFC] p-3 rounded-xl border border-[#E2E8F0] text-xs font-bold flex justify-between items-center"><span className="text-[#B45309]">-${w.amount.toFixed(2)}</span><span className="text-[10px] text-[#94A3B8] font-mono">{w.timestamp}</span></div>
                       ))}
                     </div>
                   )}
