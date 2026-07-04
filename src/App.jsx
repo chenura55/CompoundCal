@@ -15,8 +15,29 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app); 
 
 export default function App() {
-  // --- 🪄 INJECT PREMIUM FONTS ON MOUNT ---
+  // --- 🪄 INJECT PREMIUM FONTS, TAB NAME & DYNAMIC FAVICON ON MOUNT ---
   useEffect(() => {
+    // Tab Name වෙනස් කිරීම
+    document.title = "CompoundPro";
+
+    // Dynamic Favicon (Green Circle) එකක් Inject කිරීම
+    const canvas = document.createElement('canvas');
+    canvas.width = 32;
+    canvas.height = 32;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.beginPath();
+      ctx.arc(16, 16, 14, 0, 2 * Math.PI, false);
+      ctx.fillStyle = '#10B981'; // Premium Green
+      ctx.fill();
+    }
+    const linkFavicon = document.querySelector("link[rel*='icon']") || document.createElement('link');
+    linkFavicon.type = 'image/x-icon';
+    linkFavicon.rel = 'shortcut icon';
+    linkFavicon.href = canvas.toDataURL("image/x-icon");
+    document.head.appendChild(linkFavicon);
+
+    // Fonts Load කිරීම
     const link1 = document.createElement('link');
     link1.rel = 'preconnect';
     link1.href = 'https://fonts.googleapis.com';
@@ -328,14 +349,22 @@ export default function App() {
   // ---------------- 🔒 VIEW 1: LOGIN PORTAL ----------------
   if (!isAuthenticated) {
     return (
-      <div style={{ fontFamily: '"Montserrat", sans-serif' }} className="min-h-screen bg-[#F4F6F5] text-[#1E293B] flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-white border border-[#E2E8F0] p-8 rounded-3xl shadow-sm space-y-6">
+      // 📝 background inline SVG grid pattern එකක් දමා White + Green abstract lining හැදුවා
+      <div 
+        style={{ 
+          fontFamily: '"Montserrat", sans-serif',
+          backgroundColor: '#ffffff',
+          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cpath d='M60 0H0v60h60V0zM1 59V1h58v58H1z' fill='%2310b981' fill-opacity='0.04'/%3E%3Cpath d='M60 0H0v60h60V0z' fill='none' stroke='%2310b981' stroke-width='0.5' stroke-opacity='0.08' stroke-dasharray='5,5'/%3E%3C/svg%3E")`
+        }} 
+        className="min-h-screen text-[#1E293B] flex flex-col items-center justify-center p-4 relative"
+      >
+        <div className="w-full max-w-md bg-white/95 backdrop-blur-md border border-[#E2E8F0] p-8 rounded-3xl shadow-xl space-y-6 z-10">
           <div className="text-center">
-            <div className="w-14 h-14 rounded-full bg-[#10B981] flex items-center justify-center text-white mx-auto mb-4 shadow-xs">
+            <div className="w-14 h-14 rounded-full bg-[#10B981] flex items-center justify-center text-white mx-auto mb-4 shadow-md">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 10.5V6.75a4.5 4.5 0 1 1 9 0v3.75M3.75 21.75h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H3.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>
             </div>
             <h2 style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-xl font-bold text-[#0F172A] tracking-tight">CompoundPro</h2>
-            <p className="text-sm font-bold text-[#047857] mt-1 bg-[#E6F4EA] px-3 py-1 rounded-lg w-fit mx-auto border border-[#A7F3D0]">Welcome to the real trading.</p>
+            <p className="text-sm font-bold text-[#047857] mt-1.5 bg-[#E6F4EA] px-3 py-1 rounded-lg w-fit mx-auto border border-[#A7F3D0]">Welcome to the real trading.</p>
           </div>
 
           {loginError && (
@@ -351,7 +380,7 @@ export default function App() {
                 className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3.5 text-base focus:outline-none focus:border-[#10B981] text-[#0F172A]"
               />
             </div>
-            <button type="submit" disabled={isLoadingData} style={{ fontFamily: '"Unbounded", sans-serif' }} className="w-full py-3.5 bg-[#047857] hover:bg-[#065F46] text-white font-bold text-xs uppercase tracking-wider rounded-xl transition mt-2 flex items-center justify-center gap-2 disabled:opacity-50">
+            <button type="submit" disabled={isLoadingData} style={{ fontFamily: '"Unbounded", sans-serif' }} className="w-full py-3.5 bg-[#047857] hover:bg-[#065F46] text-white font-bold text-xs uppercase tracking-wider rounded-xl transition mt-2 flex items-center justify-center gap-2 shadow-md">
               {isLoadingData ? "Connecting to Realtime DB..." : "Login Now"}
               {!isLoadingData && <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg>}
             </button>
@@ -363,13 +392,17 @@ export default function App() {
             <p>• Chenura: <code className="font-bold text-[#047857]">chenu456</code></p>
           </div>
         </div>
+
+        {/* 📝 Login Page Copyright Footer */}
+        <footer className="mt-8 text-center text-[11px] text-[#94A3B8] font-semibold z-10">
+          © 2026 CompoundPro. Designed by <span className="text-slate-600 font-bold">ChenuraDeSilva</span>
+        </footer>
       </div>
     );
   }
 
   // ---------------- 🎨 VIEW 2: DASHBOARD MAIN SCREEN ----------------
   return (
-    // 📝 h-screen සහ overflow-hidden මගින් මුළු පිටුවම එක තැනක Stable (Fixed) කර තබයි
     <div style={{ fontFamily: '"Montserrat", sans-serif' }} className="h-screen w-full bg-[#F4F6F5] text-[#1E293B] flex flex-col md:flex-row select-none overflow-hidden relative">
       
       {/* ATTRACIVE MODAL POPUP */}
@@ -408,7 +441,7 @@ export default function App() {
         </div>
       )}
 
-      {/* MOBILE RESPONSIVE HEADER - STABLE (FIXED ON TOP) */}
+      {/* MOBILE RESPONSIVE HEADER */}
       <header className="w-full bg-white border-b border-[#E2E8F0] px-6 py-4 flex md:hidden justify-between items-center shadow-xs z-50 sticky top-0 flex-shrink-0">
         <div className="flex items-center gap-2">
           <div style={{ fontFamily: '"Unbounded", sans-serif' }} className="w-7 h-7 rounded-full bg-[#10B981] flex items-center justify-center text-white font-black text-xs">
@@ -439,7 +472,7 @@ export default function App() {
         </div>
       )}
 
-      {/* DESKTOP SIDEBAR MENU - STABLE (FIXED ON SIDE) */}
+      {/* DESKTOP SIDEBAR MENU */}
       <aside className="w-64 bg-white border-r border-[#E2E8F0] p-6 flex-col justify-between hidden md:flex h-full flex-shrink-0">
         <div>
           <div className="flex items-center gap-2.5 mb-8">
@@ -479,14 +512,17 @@ export default function App() {
             </div>
           </div>
           <button onClick={handleLogoutAction} className="w-full py-2.5 border border-rose-200 bg-rose-50/40 hover:bg-rose-50 text-rose-600 font-bold text-xs rounded-xl uppercase tracking-wider transition flex items-center justify-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" /></svg>Log Out</button>
+          
+          {/* 📝 Sidebar Copyright Footer */}
+          <p className="text-[10px] text-[#94A3B8] text-center pt-2 font-semibold">
+            © 2026 Designed by <span className="text-slate-600 font-bold">ChenuraDeSilva</span>
+          </p>
         </div>
       </aside>
 
-      {/* CORE HUB PANEL - 🔒 ONE MAIN BOX CONTAINER WITH FIXED INDEPENDENT SCROLLING */}
-      {/* 📝 flex-1, flex-col, h-full, සහ overflow-hidden මඟින් පිටත Header එක/Sidebar එක බ්ලොක් කර ප්‍රධාන Frame එකක් සාදයි */}
+      {/* CORE HUB PANEL */}
       <main className="flex-1 flex flex-col h-full max-w-7xl w-full mx-auto p-4 md:p-8 overflow-hidden">
         
-        {/* Main Box Header (Fixed Inside the Frame) */}
         <header className="flex justify-between items-center mb-6 flex-shrink-0">
           <div>
             <span className="text-[10px] font-mono font-bold text-[#047857] uppercase tracking-widest bg-[#E6F4EA] px-3 py-1 rounded-md border border-[#A7F3D0] flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse"></span>Realtime DB Connected</span>
@@ -497,8 +533,7 @@ export default function App() {
           )}
         </header>
 
-        {/* 📦 THE MAIN MASTER CONTAINER BOX: ඔයා කියපු තනි ස්ථාවර පෙට්ටිය (Scroll Box) */}
-        {/* 📝 overflow-y-auto සහ pr-2 මඟින් සියලුම කාඩ්පත් මේ තනි සුදු පෙට්ටිය ඇතුළේ විතරක් Scroll වෙන්න සලස්වයි */}
+        {/* --- STABLE SCROLLABLE CONTAINER BOX --- */}
         <div className="flex-1 overflow-y-auto pr-1 md:pr-2 custom-scrollbar space-y-6 pb-6">
           
           {/* --- VIEW 1: HOME MAIN DASHBOARD --- */}
