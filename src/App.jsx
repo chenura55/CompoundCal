@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { initializeApp } from "firebase/app";
-// 📝 Firestore සඳහා අවශ්‍ය කොටස් Import කරගැනීම
-import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
+// 📝 Realtime Database සඳහා අවශ්‍ය කොටස් Import කරගැනීම
+import { getDatabase, ref, set, get } from "firebase/database"; 
 
 const firebaseConfig = {
   apiKey: "AIzaSyB5_WiMFhRpVk5OxiZTTruYlDc9dt3AH6Y",
@@ -12,9 +12,9 @@ const firebaseConfig = {
   appId: "1:3452723447:web:d91b83e92a14d481b6b3f2"
 };
 
-// Firebase සහ Firestore Initialize කිරීම
+// Firebase සහ Realtime Database Initialize කිරීම
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+const db = getDatabase(app); 
 
 export default function App() {
   // --- 🪄 INJECT PREMIUM FONTS ON MOUNT ---
@@ -57,7 +57,7 @@ export default function App() {
   // Popup Modal Alert State
   const [customAlert, setCustomAlert] = useState({ isOpen: false, type: 'info', title: '', message: '', action: null });
 
-  // 💾 Firebase Firestore එකෙන් Data ගන්නා නිසා Default State එක හිස්ව තබයි
+  // 💾 App State Initialize
   const [allPlans, setAllPlans] = useState({
     trader1: [],
     trader2: [],
@@ -68,14 +68,14 @@ export default function App() {
 
   const [isLoadingData, setIsLoadingData] = useState(false);
 
-  // 🔁 1. AUTO-SAVE LOOP: App State එකේ වෙනසක් වෙන හැමවෙලාවකම Firebase Cloud එකට Auto-Save වීම
+  // 🔁 1. AUTO-SAVE LOOP (Realtime Database Version)
   useEffect(() => {
     const saveToFirebase = async () => {
       if (currentUser && isAuthenticated) {
         try {
-          const userDocRef = doc(db, "compoundpro_vault", currentUser.id);
-          // මුළු allPlans object එකම හෝ අදාළ user ගේ කොටස cloud එකේ සේව් කරයි
-          await setDoc(userDocRef, allPlans, { merge: true });
+          // Firebase එකේ compoundpro_vault/traderId කියන path එකට සේව් කරයි
+          const userRef = ref(db, "compoundpro_vault/" + currentUser.id);
+          await set(userRef, allPlans);
         } catch (error) {
           console.error("Error auto-saving to Firebase: ", error);
         }
@@ -100,7 +100,7 @@ export default function App() {
 
   const currentTraderPlans = currentUser ? (allPlans[currentUser.id] || []) : [];
 
-  // Active Plan එක වෙනස් වන විට, ඒකට අදාළ History සහ Withdrawals අප්ඩේට් කරගැනීම
+  // Active Plan එක වෙනස් වන විට History සහ Withdrawals අප්ඩේට් කරගැනීම
   useEffect(() => {
     if (activePlan) {
       setTradesHistory(activePlan.tradesHistory || []);
@@ -142,7 +142,7 @@ export default function App() {
     triggerPopupAlert('Exported!', 'Your session history log file has been downloaded successfully as a spreadsheet CSV file.', 'success');
   };
 
-  // 📥 2. FETCH DATA LOOP: User කෙනෙක් සාර්ථකව Login වුණු ගමන් Firebase Cloud එකෙන් Data ඇදලා ගැනීම
+  // 📥 2. FETCH DATA LOOP (Realtime Database Version)
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setLoginError('');
@@ -151,14 +151,14 @@ export default function App() {
     if (matchedProfile) {
       setIsLoadingData(true);
       try {
-        const userDocRef = doc(db, "compoundpro_vault", matchedProfile.id);
-        const docSnap = await getDoc(userDocRef);
+        const userRef = ref(db, "compoundpro_vault/" + matchedProfile.id);
+        const snapshot = await get(userRef);
 
-        if (docSnap.exists()) {
-          // කලින් Firebase එකේ සේව් කරපු data තිබේ නම් ඒවා App එකට ලෝඩ් කරයි
-          setAllPlans(docSnap.data());
+        if (snapshot.exists()) {
+          // Realtime database එකේ data තිබේ නම් .val() මගින් ලබා ගනී
+          setAllPlans(snapshot.val());
         } else {
-          // Cloud එකේ දත්ත නැති අලුත්ම User කෙනෙක් නම් හිස් Array එකක් සාදයි
+          // අලුත්ම User කෙනෙක් නම් හිස් array එකක් සාදයි
           setAllPlans(prev => ({
             ...prev,
             [matchedProfile.id]: []
@@ -171,8 +171,8 @@ export default function App() {
         setInitialBalance(matchedProfile.initial);
         setPasswordInput('');
       } catch (error) {
-        console.error("Firebase fetch error: ", error);
-        setLoginError('Database එකට සම්බන්ද වෙන්න බැරි වුණා. කරුණාකර නැවත උත්සාහ කරන්න.');
+        console.error("Firebase Realtime DB fetch error: ", error);
+        setLoginError('Database එකට සම්බන්ධ වෙන්න බැරි වුණා. කරුණාකර නැවත උත්සාහ කරන්න.');
       } finally {
         setIsLoadingData(false);
       }
@@ -368,7 +368,7 @@ export default function App() {
               />
             </div>
             <button type="submit" disabled={isLoadingData} style={{ fontFamily: '"Unbounded", sans-serif' }} className="w-full py-3.5 bg-[#047857] hover:bg-[#065F46] text-white font-bold text-xs uppercase tracking-wider rounded-xl transition mt-2 flex items-center justify-center gap-2 disabled:opacity-50">
-              {isLoadingData ? "Connecting to Cloud..." : "Login Now"}
+              {isLoadingData ? "Connecting to Realtime DB..." : "Login Now"}
               {!isLoadingData && <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg>}
             </button>
           </form>
@@ -490,7 +490,7 @@ export default function App() {
             <div className="w-10 h-10 rounded-full bg-[#E6F4EA] text-[#047857] flex items-center justify-center font-black text-sm uppercase">{currentUser.name.slice(0, 2)}</div>
             <div>
               <p className="text-sm font-black text-[#0F172A]">{currentUser.name}</p>
-              <p className="text-[10px] text-[#94A3B8] font-semibold">Cloud Sync Active</p>
+              <p className="text-[10px] text-[#94A3B8] font-semibold">Realtime Sync Active</p>
             </div>
           </div>
           <button onClick={handleLogoutAction} className="w-full py-2.5 border border-rose-200 bg-rose-50/40 hover:bg-rose-50 text-rose-600 font-bold text-xs rounded-xl uppercase tracking-wider transition flex items-center justify-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" /></svg>Log Out</button>
@@ -502,7 +502,7 @@ export default function App() {
         
         <header className="flex justify-between items-center mb-6 md:mb-8 mt-2 md:mt-0">
           <div>
-            <span className="text-[10px] font-mono font-bold text-[#047857] uppercase tracking-widest bg-[#E6F4EA] px-3 py-1 rounded-md border border-[#A7F3D0] flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse"></span>Cloud Online</span>
+            <span className="text-[10px] font-mono font-bold text-[#047857] uppercase tracking-widest bg-[#E6F4EA] px-3 py-1 rounded-md border border-[#A7F3D0] flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse"></span>Realtime DB Connected</span>
             <h1 style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-xl md:text-2xl font-black text-[#0F172A] tracking-tight mt-3">Welcome back, <span className="text-[#047857]">{currentUser.name}</span></h1>
           </div>
           {view !== 'dashboard' && (
@@ -547,7 +547,7 @@ export default function App() {
               </div>
               
               {currentTraderPlans.length === 0 ? (
-                <div className="p-16 text-center text-[#94A3B8] text-base font-semibold">No trading plans found on Cloud. Click 'Create New Plan' to start.</div>
+                <div className="p-16 text-center text-[#94A3B8] text-base font-semibold">No trading plans found on Realtime DB. Click 'Create New Plan' to start.</div>
               ) : (
                 <div className="overflow-x-auto w-full">
                   <table className="w-full text-left border-collapse min-w-[700px]">
