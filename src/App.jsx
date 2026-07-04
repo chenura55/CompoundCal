@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { initializeApp } from "firebase/app";
+// 📝 Firestore සඳහා අවශ්‍ය කොටස් Import කරගැනීම
+import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyB5_WiMFhRpVk5OxiZTTruYlDc9dt3AH6Y",
@@ -10,7 +12,9 @@ const firebaseConfig = {
   appId: "1:3452723447:web:d91b83e92a14d481b6b3f2"
 };
 
+// Firebase සහ Firestore Initialize කිරීම
 const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 export default function App() {
   // --- 🪄 INJECT PREMIUM FONTS ON MOUNT ---
@@ -23,7 +27,6 @@ export default function App() {
     const link2 = document.createElement('link');
     link2.rel = 'preconnect';
     link2.href = 'https://fonts.gstatic.com';
-    link2.crossOrigin = 'anonymous';
     document.head.appendChild(link2);
 
     const link3 = document.createElement('link');
@@ -54,29 +57,33 @@ export default function App() {
   // Popup Modal Alert State
   const [customAlert, setCustomAlert] = useState({ isOpen: false, type: 'info', title: '', message: '', action: null });
 
-  // 💾 BACKEND LOCALSTORAGE PERSISTENT SAVING LOOPS INITIALIZATION MAPPING
-  const [allPlans, setAllPlans] = useState(() => {
-    const savedData = localStorage.getItem('compoundpro_vault_data');
-    if (savedData) {
-      try {
-        return JSON.parse(savedData);
-      } catch (e) {
-        console.error("Local data parsing error, resetting database array.");
-      }
-    }
-    return {
-      trader1: [{ id: 101, name: "Michael's $100 Challenge", initialBalance: 100, currentBalance: 324, status: 'Active', riskPercent: 20, rewardRatio: 2 }],
-      trader2: [{ id: 102, name: "Chenu Safe Growth", initialBalance: 500, currentBalance: 860, status: 'Active', riskPercent: 5, rewardRatio: 2 }],
-      trader3: [],
-      trader4: [],
-      trader5: []
-    };
+  // 💾 Firebase Firestore එකෙන් Data ගන්නා නිසා Default State එක හිස්ව තබයි
+  const [allPlans, setAllPlans] = useState({
+    trader1: [],
+    trader2: [],
+    trader3: [],
+    trader4: [],
+    trader5: []
   });
 
-  // Automatically save history data to browser storage when states modify
+  const [isLoadingData, setIsLoadingData] = useState(false);
+
+  // 🔁 1. AUTO-SAVE LOOP: App State එකේ වෙනසක් වෙන හැමවෙලාවකම Firebase Cloud එකට Auto-Save වීම
   useEffect(() => {
-    localStorage.setItem('compoundpro_vault_data', JSON.stringify(allPlans));
-  }, [allPlans]);
+    const saveToFirebase = async () => {
+      if (currentUser && isAuthenticated) {
+        try {
+          const userDocRef = doc(db, "compoundpro_vault", currentUser.id);
+          // මුළු allPlans object එකම හෝ අදාළ user ගේ කොටස cloud එකේ සේව් කරයි
+          await setDoc(userDocRef, allPlans, { merge: true });
+        } catch (error) {
+          console.error("Error auto-saving to Firebase: ", error);
+        }
+      }
+    };
+
+    saveToFirebase();
+  }, [allPlans, currentUser, isAuthenticated]);
 
   // Active Running Engine States
   const [activePlan, setActivePlan] = useState(null);
@@ -93,6 +100,14 @@ export default function App() {
 
   const currentTraderPlans = currentUser ? (allPlans[currentUser.id] || []) : [];
 
+  // Active Plan එක වෙනස් වන විට, ඒකට අදාළ History සහ Withdrawals අප්ඩේට් කරගැනීම
+  useEffect(() => {
+    if (activePlan) {
+      setTradesHistory(activePlan.tradesHistory || []);
+      setWithdrawals(activePlan.withdrawals || []);
+    }
+  }, [activePlan]);
+
   const triggerPopupAlert = (title, message, type = 'info', action = null) => {
     setCustomAlert({ isOpen: true, type, title, message, action });
   };
@@ -108,7 +123,6 @@ export default function App() {
       return;
     }
 
-    // Build plain CSV formatted text framework spreadsheet map
     let csvContent = "data:text/csv;charset=utf-8,";
     csvContent += "Trade Number,Starting Balance,Money At Risk,Result State,Payout Gain/Loss,Ending Balance,Setup Note\n";
 
@@ -117,7 +131,6 @@ export default function App() {
       csvContent += row + "\n";
     });
 
-    // Create automatic invisible link click trigger on client browser window
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -129,16 +142,40 @@ export default function App() {
     triggerPopupAlert('Exported!', 'Your session history log file has been downloaded successfully as a spreadsheet CSV file.', 'success');
   };
 
-  const handleLoginSubmit = (e) => {
+  // 📥 2. FETCH DATA LOOP: User කෙනෙක් සාර්ථකව Login වුණු ගමන් Firebase Cloud එකෙන් Data ඇදලා ගැනීම
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setLoginError('');
     const matchedProfile = passwordsDatabase[passwordInput.trim()];
+    
     if (matchedProfile) {
-      setCurrentUser(matchedProfile);
-      setIsAuthenticated(true);
-      setView('dashboard');
-      setInitialBalance(matchedProfile.initial);
-      setPasswordInput('');
+      setIsLoadingData(true);
+      try {
+        const userDocRef = doc(db, "compoundpro_vault", matchedProfile.id);
+        const docSnap = await getDoc(userDocRef);
+
+        if (docSnap.exists()) {
+          // කලින් Firebase එකේ සේව් කරපු data තිබේ නම් ඒවා App එකට ලෝඩ් කරයි
+          setAllPlans(docSnap.data());
+        } else {
+          // Cloud එකේ දත්ත නැති අලුත්ම User කෙනෙක් නම් හිස් Array එකක් සාදයි
+          setAllPlans(prev => ({
+            ...prev,
+            [matchedProfile.id]: []
+          }));
+        }
+
+        setCurrentUser(matchedProfile);
+        setIsAuthenticated(true);
+        setView('dashboard');
+        setInitialBalance(matchedProfile.initial);
+        setPasswordInput('');
+      } catch (error) {
+        console.error("Firebase fetch error: ", error);
+        setLoginError('Database එකට සම්බන්ද වෙන්න බැරි වුණා. කරුණාකර නැවත උත්සාහ කරන්න.');
+      } finally {
+        setIsLoadingData(false);
+      }
     } else {
       setLoginError('Wrong password! Please check and try again.');
     }
@@ -162,7 +199,9 @@ export default function App() {
       currentBalance: Number(initialBalance),
       riskPercent: Number(riskPercent),
       rewardRatio: rewardRatio,
-      status: 'Active'
+      status: 'Active',
+      tradesHistory: [],
+      withdrawals: []
     };
     
     setAllPlans(prev => ({
@@ -170,8 +209,6 @@ export default function App() {
       [currentUser.id]: [...(prev[currentUser.id] || []), newPlan]
     }));
     setActivePlan(newPlan);
-    setTradesHistory([]);
-    setWithdrawals([]);
     setView('active');
     setPlanName('');
     setIsMobileMenuOpen(false);
@@ -179,8 +216,6 @@ export default function App() {
 
   const handleLaunchRadar = (plan) => {
     setActivePlan(plan);
-    setTradesHistory([]);
-    setWithdrawals([]);
     setView('active');
     setIsMobileMenuOpen(false);
   };
@@ -210,8 +245,12 @@ export default function App() {
     };
 
     const updatedHistory = [...tradesHistory, loggedTrade];
-    setTradesHistory(updatedHistory);
-    const updatedPlan = { ...activePlan, currentBalance: newEndingBalance };
+    const updatedPlan = { 
+      ...activePlan, 
+      currentBalance: newEndingBalance,
+      tradesHistory: updatedHistory 
+    };
+    
     setActivePlan(updatedPlan);
 
     setAllPlans(prev => ({
@@ -235,8 +274,13 @@ export default function App() {
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
-    const updatedPlan = { ...activePlan, currentBalance: newBalance };
-    setWithdrawals([...withdrawals, newWithdrawal]);
+    const updatedWithdrawals = [...withdrawals, newWithdrawal];
+    const updatedPlan = { 
+      ...activePlan, 
+      currentBalance: newBalance,
+      withdrawals: updatedWithdrawals 
+    };
+    
     setActivePlan(updatedPlan);
 
     setAllPlans(prev => ({
@@ -319,13 +363,13 @@ export default function App() {
               <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] mb-2">Password</label>
               <input 
                 type="password" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)}
-                placeholder="••••••••" required
+                placeholder="••••••••" required disabled={isLoadingData}
                 className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3.5 text-base focus:outline-none focus:border-[#10B981] text-[#0F172A]"
               />
             </div>
-            <button type="submit" style={{ fontFamily: '"Unbounded", sans-serif' }} className="w-full py-3.5 bg-[#047857] hover:bg-[#065F46] text-white font-bold text-xs uppercase tracking-wider rounded-xl transition mt-2 flex items-center justify-center gap-2">
-              Login Now 
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg>
+            <button type="submit" disabled={isLoadingData} style={{ fontFamily: '"Unbounded", sans-serif' }} className="w-full py-3.5 bg-[#047857] hover:bg-[#065F46] text-white font-bold text-xs uppercase tracking-wider rounded-xl transition mt-2 flex items-center justify-center gap-2 disabled:opacity-50">
+              {isLoadingData ? "Connecting to Cloud..." : "Login Now"}
+              {!isLoadingData && <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg>}
             </button>
           </form>
 
@@ -446,7 +490,7 @@ export default function App() {
             <div className="w-10 h-10 rounded-full bg-[#E6F4EA] text-[#047857] flex items-center justify-center font-black text-sm uppercase">{currentUser.name.slice(0, 2)}</div>
             <div>
               <p className="text-sm font-black text-[#0F172A]">{currentUser.name}</p>
-              <p className="text-[10px] text-[#94A3B8] font-semibold">Web Secure Mode</p>
+              <p className="text-[10px] text-[#94A3B8] font-semibold">Cloud Sync Active</p>
             </div>
           </div>
           <button onClick={handleLogoutAction} className="w-full py-2.5 border border-rose-200 bg-rose-50/40 hover:bg-rose-50 text-rose-600 font-bold text-xs rounded-xl uppercase tracking-wider transition flex items-center justify-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" /></svg>Log Out</button>
@@ -458,7 +502,7 @@ export default function App() {
         
         <header className="flex justify-between items-center mb-6 md:mb-8 mt-2 md:mt-0">
           <div>
-            <span className="text-[10px] font-mono font-bold text-[#047857] uppercase tracking-widest bg-[#E6F4EA] px-3 py-1 rounded-md border border-[#A7F3D0] flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse"></span>Online</span>
+            <span className="text-[10px] font-mono font-bold text-[#047857] uppercase tracking-widest bg-[#E6F4EA] px-3 py-1 rounded-md border border-[#A7F3D0] flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse"></span>Cloud Online</span>
             <h1 style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-xl md:text-2xl font-black text-[#0F172A] tracking-tight mt-3">Welcome back, <span className="text-[#047857]">{currentUser.name}</span></h1>
           </div>
           {view !== 'dashboard' && (
@@ -497,13 +541,13 @@ export default function App() {
               <div className="p-5 border-b border-[#F1F5F9] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white">
                 <div>
                   <h3 style={{ fontFamily: '"Unbounded", sans-serif' }} className="font-bold text-sm text-[#0F172A] uppercase tracking-wide">All Trading Plans</h3>
-                  <p className="text-xs text-[#64748B] mt-1">Here is the list of all your created trading plans.</p>
+                  <p className="text-xs text-[#64748B] mt-1">Here is the list of all your cloud-secured trading plans.</p>
                 </div>
                 <button onClick={() => setView('create')} className="w-full sm:w-auto px-5 py-2.5 bg-[#047857] hover:bg-[#065F46] text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>Create New Plan</button>
               </div>
               
               {currentTraderPlans.length === 0 ? (
-                <div className="p-16 text-center text-[#94A3B8] text-base font-semibold">No trading plans yet. Click 'Create New Plan' to start.</div>
+                <div className="p-16 text-center text-[#94A3B8] text-base font-semibold">No trading plans found on Cloud. Click 'Create New Plan' to start.</div>
               ) : (
                 <div className="overflow-x-auto w-full">
                   <table className="w-full text-left border-collapse min-w-[700px]">
@@ -582,7 +626,6 @@ export default function App() {
                   <p className="text-xs text-[#64748B] mt-1 font-bold">Risk Level: <b className="text-slate-700">{activePlan.riskPercent}%</b> | Settings: <b className="text-slate-700">Stable 1:2 Rewards</b></p>
                 </div>
                 <div className="flex gap-2.5 w-full sm:w-auto">
-                  {/* FEATURE TRIGGER 2: EXPORT DATA CONSOLE ELEMENT INTERACTION BUTTON */}
                   <button 
                     onClick={handleExportSessionCSV}
                     style={{ fontFamily: '"Unbounded", sans-serif' }}
@@ -725,7 +768,7 @@ export default function App() {
                 {activePlan.status === 'Active' ? (
                   <form onSubmit={handleWithdraw} className="space-y-3">
                     <input type="number" value={withdrawalInput} onChange={(e) => setWithdrawalInput(e.target.value)} placeholder="Amount to withdraw ($)" className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3 text-sm font-semibold text-[#0F172A]" min="1" max={activePlan.currentBalance} />
-                    <button type="submit" style={{ fontFamily: '"Unbounded", sans-serif' }} className="w-full py-2.5 bg-[#047857] text-white font-bold text-[10px] uppercase tracking-wider rounded-xl shadow-xs transition flex items-center justify-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>Confirm Withdrawal</button>
+                    <button type="submit" style={{ fontFamily: '"Unbounded", sans-serif' }} className="w-full py-2.5 bg-[#047857] text-white font-bold text-[10px] uppercase tracking-wider rounded-xl shadow-xs transition flex items-center justify-center gap-1"><svg xmlns="http://www.w3.org/2000/xl" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>Confirm Withdrawal</button>
                   </form>
                 ) : (
                   <p className="text-xs text-[#94A3B8] text-center py-2.5 border border-dashed border-[#E2E8F0] rounded-xl font-bold">Withdrawals closed.</p>
