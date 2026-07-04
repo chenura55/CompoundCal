@@ -1,4 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import { initializeApp } from "firebase/app";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyB5_WiMFhRpVk5OxiZTTruYlDc9dt3AH6Y",
+  authDomain: "compound-pro.firebaseapp.com",
+  projectId: "compound-pro",
+  storageBucket: "compound-pro.firebasestorage.app",
+  messagingSenderId: "3452723447",
+  appId: "1:3452723447:web:d91b83e92a14d481b6b3f2"
+};
+
+const app = initializeApp(firebaseConfig);
 
 export default function App() {
   // --- 🪄 INJECT PREMIUM FONTS ON MOUNT ---
