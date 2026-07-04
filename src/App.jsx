@@ -53,11 +53,11 @@ export default function App() {
 
   // --- 🔒 PASSWORDS DATABASE FOR 5 USERS ---
   const passwordsDatabase = {
-    "Chenura": { id: "trader1", username: "chenura", name: "Chenura" },
-    "Rachitha": { id: "trader2", username: "raxir", name: "Rachitha" },
-    "Theekshana": { id: "trader3", username: "nepu", name: "Theekshana" },
-    "Ayesh": { id: "trader4", username: "ayesh", name: "Ayesh" },
-    "Dasun": { id: "trader5", username: "dasun", name: "Dasun" }
+    "Chenura123": { id: "trader1", username: "chenura", name: "Chenura" },
+    "Rachitha456": { id: "trader2", username: "raxir", name: "Rachitha" },
+    "Theekshana789": { id: "trader3", username: "nepu", name: "Theekshana" },
+    "Ayesh0008": { id: "trader4", username: "ayesh", name: "Ayesh" },
+    "Dasun9658": { id: "trader5", username: "dasun", name: "Dasun" }
   };
 
   // Auth States
