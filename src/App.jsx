@@ -15,7 +15,7 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app); 
 
 // --- SESSION STORAGE CONFIGURATION ---
-const SESSION_TIMEOUT_MS = 4 * 60 * 60 * 1000; // 4 Hours
+const SESSION_TIMEOUT_MS = 6 * 60 * 60 * 1000; // 6 Hours
 
 export default function App() {
   // --- 🪄 INJECT PREMIUM FONTS, TAB NAME & DYNAMIC FAVICON ON MOUNT ---
@@ -56,11 +56,11 @@ export default function App() {
 
   // --- 🔒 PASSWORDS DATABASE FOR 5 USERS ---
   const passwordsDatabase = {
-    "Chenura123": { id: "trader1", username: "chenura", name: "Chenura" },
-    "Rachitha456": { id: "trader2", username: "raxir", name: "Rachitha" },
-    "Theekshana789": { id: "trader3", username: "nepu", name: "Theekshana" },
-    "Ayesh0008": { id: "trader4", username: "ayesh", name: "Ayesh" },
-    "Dasun9658": { id: "trader5", username: "dasun", name: "Dasun" }
+    "Chenura$120": { id: "trader1", username: "chenura", name: "Chenura" },
+    "Rachiya@345": { id: "trader2", username: "raxir", name: "Rachitha" },
+    "Nepu@#5678": { id: "trader3", username: "nepu", name: "Theekshana" },
+    "Ayesh*&0008": { id: "trader4", username: "ayesh", name: "Ayesh" },
+    "Dassa@@1234": { id: "trader5", username: "dasun", name: "Dasun" }
   };
 
   // --- PERSISTED INITIAL STATES ON REFRESH ---
@@ -145,8 +145,7 @@ export default function App() {
       }
     };
 
-    // Check periodically every 1 minute
-    const interval = setInterval(checkSessionExpiry, 60000);
+    const interval = setInterval(checkSessionExpiry, 60000); // Check every minute
     return () => clearInterval(interval);
   }, [isAuthenticated]);
 
@@ -189,7 +188,7 @@ export default function App() {
             }
           }
         } catch (e) {
-          console.error("Failed to parse fallback cache setup data maps", e);
+          console.error("Failed to fetch fresh dashboard states on mount refresh", e);
         }
       }
     };
