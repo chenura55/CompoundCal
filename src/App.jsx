@@ -14,6 +14,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app); 
 
+// --- SESSION STORAGE CONFIGURATION ---
+const SESSION_TIMEOUT_MS = 4 * 60 * 60 * 1000; // 4 Hours
+
 export default function App() {
   // --- 🪄 INJECT PREMIUM FONTS, TAB NAME & DYNAMIC FAVICON ON MOUNT ---
   useEffect(() => {
@@ -60,14 +63,41 @@ export default function App() {
     "Dasun9658": { id: "trader5", username: "dasun", name: "Dasun" }
   };
 
-  // Auth States
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
+  // --- PERSISTED INITIAL STATES ON REFRESH ---
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    const savedAuth = localStorage.getItem('cp_isAuthenticated');
+    const loginTime = localStorage.getItem('cp_loginTimestamp');
+    
+    if (savedAuth === 'true' && loginTime) {
+      if (Date.now() - parseInt(loginTime, 10) < SESSION_TIMEOUT_MS) {
+        return true;
+      } else {
+        localStorage.clear(); // Timeout expired
+      }
+    }
+    return false;
+  });
+
+  const [currentUser, setCurrentUser] = useState(() => {
+    const user = localStorage.getItem('cp_currentUser');
+    return user ? JSON.parse(user) : null;
+  });
+
+  const [view, setView] = useState(() => {
+    return localStorage.getItem('cp_currentView') || 'dashboard';
+  });
+
+  const [activePlan, setActivePlan] = useState(() => {
+    const plan = localStorage.getItem('cp_activePlan');
+    return plan ? JSON.parse(plan) : null;
+  });
+
+  // Auth Layout States
   const [passwordInput, setPasswordInput] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
   
   // Navigation & Mobile Menu
-  const [view, setView] = useState('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // Popup Modal Alert State
@@ -80,7 +110,7 @@ export default function App() {
 
   const [isLoadingData, setIsLoadingData] = useState(false);
 
-  // 🔁 1. AUTO-SAVE LOOP
+  // 🔁 1. AUTO-SAVE LOOP TO FIREBASE
   useEffect(() => {
     const saveToFirebase = async () => {
       if (currentUser && isAuthenticated) {
@@ -95,8 +125,32 @@ export default function App() {
     saveToFirebase();
   }, [allPlans, currentUser, isAuthenticated]);
 
-  // Active Running Engine States
-  const [activePlan, setActivePlan] = useState(null);
+  // Sync state variables to LocalStorage to handle manual page refreshing
+  useEffect(() => {
+    localStorage.setItem('cp_isAuthenticated', isAuthenticated ? 'true' : 'false');
+    localStorage.setItem('cp_currentView', view);
+    localStorage.setItem('cp_currentUser', currentUser ? JSON.stringify(currentUser) : '');
+    localStorage.setItem('cp_activePlan', activePlan ? JSON.stringify(activePlan) : '');
+  }, [isAuthenticated, view, currentUser, activePlan]);
+
+  // ⏳ SESSION EXPIRY BACKGROUND TRACKER
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const checkSessionExpiry = () => {
+      const loginTime = localStorage.getItem('cp_loginTimestamp');
+      if (loginTime && (Date.now() - parseInt(loginTime, 10) >= SESSION_TIMEOUT_MS)) {
+        triggerPopupAlert('Session Expired', 'Your 4-hour high-security portal window has timed out. Logging out.', 'info');
+        handleLogoutAction();
+      }
+    };
+
+    // Check periodically every 1 minute
+    const interval = setInterval(checkSessionExpiry, 60000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
+
+  // Sync state dependencies when pulling active framework profile
   const [tradesHistory, setTradesHistory] = useState([]); 
   const [withdrawals, setWithdrawals] = useState([]);
   const [withdrawalInput, setWithdrawalInput] = useState('');
@@ -116,6 +170,31 @@ export default function App() {
       setWithdrawals(activePlan.withdrawals || []);
     }
   }, [activePlan]);
+
+  // Initial load balance sync logic on complete hard refresh cycles
+  useEffect(() => {
+    const fetchStoredDataOnRefresh = async () => {
+      if (isAuthenticated && currentUser) {
+        try {
+          const userRef = ref(db, "compoundpro_vault/" + currentUser.id);
+          const snapshot = await get(userRef);
+          if (snapshot.exists()) {
+            const data = snapshot.val();
+            setAllPlans(data);
+            
+            // Sync active plan with fresh database snapshot context data arrays
+            if (activePlan) {
+              const freshActive = data[currentUser.id]?.find(p => p.id === activePlan.id);
+              if (freshActive) setActivePlan(freshActive);
+            }
+          }
+        } catch (e) {
+          console.error("Failed to parse fallback cache setup data maps", e);
+        }
+      }
+    };
+    fetchStoredDataOnRefresh();
+  }, [isAuthenticated]);
 
   const triggerPopupAlert = (title, message, type = 'info', action = null) => {
     setCustomAlert({ isOpen: true, type, title, message, action });
@@ -163,16 +242,19 @@ export default function App() {
         const userRef = ref(db, "compoundpro_vault/" + matchedProfile.id);
         const snapshot = await get(userRef);
 
+        let pulledPlans = { trader1: [], trader2: [], trader3: [], trader4: [], trader5: [] };
         if (snapshot.exists()) {
-          setAllPlans(snapshot.val());
+          pulledPlans = snapshot.val();
+          setAllPlans(pulledPlans);
         } else {
           setAllPlans(prev => ({ ...prev, [matchedProfile.id]: [] }));
         }
 
+        localStorage.setItem('cp_loginTimestamp', Date.now().toString());
         setCurrentUser(matchedProfile);
         setIsAuthenticated(true);
         setView('dashboard');
-        setInitialBalance(matchedProfile.initial.toString());
+        setInitialBalance('100');
         setPasswordInput('');
       } catch (error) {
         console.error("Firebase Realtime DB fetch error: ", error);
@@ -192,6 +274,8 @@ export default function App() {
     setTradesHistory([]);
     setWithdrawals([]);
     setIsMobileMenuOpen(false);
+    setView('dashboard');
+    localStorage.clear();
   };
 
   const handleCreatePlan = (e) => {
@@ -210,10 +294,12 @@ export default function App() {
       withdrawals: []
     };
     
-    setAllPlans(prev => ({
-      ...prev,
-      [currentUser.id]: [...(prev[currentUser.id] || []), newPlan]
-    }));
+    const updatedPlansList = {
+      ...allPlans,
+      [currentUser.id]: [...(allPlans[currentUser.id] || []), newPlan]
+    };
+
+    setAllPlans(updatedPlansList);
     setActivePlan(newPlan);
     setView('active');
     setPlanName('');
@@ -354,7 +440,6 @@ export default function App() {
         }} 
         className="min-h-screen text-[#1E293B] flex flex-col items-center justify-center p-4 relative"
       >
-        {/* 🔒 Master Clean Credentials Box (No Passwords List Below) */}
         <div className="w-full max-w-md bg-white/95 backdrop-blur-md border border-[#E2E8F0] p-8 rounded-3xl shadow-xl space-y-6 z-10">
           <div className="text-center">
             <div className="w-14 h-14 rounded-full bg-[#10B981] flex items-center justify-center text-white mx-auto mb-4 shadow-md">
@@ -371,11 +456,28 @@ export default function App() {
           <form onSubmit={handleLoginSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] mb-2">Password</label>
-              <input 
-                type="password" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)}
-                placeholder="••••••••" required disabled={isLoadingData}
-                className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3.5 text-base focus:outline-none focus:border-[#10B981] text-[#0F172A]"
-              />
+              <div className="relative flex items-center">
+                <input 
+                  type={showPassword ? "text" : "password"} 
+                  value={passwordInput} 
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                  placeholder="••••••••" 
+                  required 
+                  disabled={isLoadingData}
+                  className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl pl-3.5 pr-11 py-3.5 text-base focus:outline-none focus:border-[#10B981] text-[#0F172A]"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 text-slate-400 hover:text-slate-600 focus:outline-none transition p-1"
+                >
+                  {showPassword ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.815 7.815 3.15 3.15m-3.15-3.15a3.75 3.75 0 1 1-5.304-5.304m5.304 5.304 3.149 3.149" /></svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
+                  )}
+                </button>
+              </div>
             </div>
             <button type="submit" disabled={isLoadingData} style={{ fontFamily: '"Unbounded", sans-serif' }} className="w-full py-3.5 bg-[#047857] hover:bg-[#065F46] text-white font-bold text-xs uppercase tracking-wider rounded-xl transition mt-2 flex items-center justify-center gap-2 shadow-md">
               {isLoadingData ? "Connecting to Realtime DB..." : "Login Now"}
@@ -395,10 +497,10 @@ export default function App() {
   return (
     <div style={{ fontFamily: '"Montserrat", sans-serif' }} className="h-screen w-full bg-[#F4F6F5] text-[#1E293B] flex flex-col md:flex-row select-none overflow-hidden relative">
       
-      {/* ATTRACIVE MODAL POPUP */}
+      {/* ATTRACTIVE MODAL POPUP */}
       {customAlert.isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white border border-[#E2E8F0] p-6 rounded-3xl w-full max-w-sm shadow-xl text-center transform scale-100 animate-fadeIn animate-scaleIn">
+          <div className="bg-white border border-[#E2E8F0] p-6 rounded-3xl w-full max-w-sm shadow-xl text-center transform scale-100 animate-fadeIn">
             <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 text-white shadow-xs ${
               customAlert.type === 'success' ? 'bg-[#10B981]' : 
               customAlert.type === 'warning' ? 'bg-amber-500' :
@@ -782,7 +884,7 @@ export default function App() {
                   {activePlan.status === 'Active' ? (
                     <form onSubmit={handleWithdraw} className="space-y-3">
                       <input type="number" step="any" value={withdrawalInput} onChange={(e) => setWithdrawalInput(e.target.value)} placeholder="Amount to withdraw ($)" className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3 text-sm font-semibold text-[#0F172A]" min="0.01" max={activePlan.currentBalance} />
-                      <button type="submit" style={{ fontFamily: '"Unbounded", sans-serif' }} className="w-full py-2.5 bg-[#047857] text-white font-bold text-[10px] uppercase tracking-wider rounded-xl shadow-xs transition flex items-center justify-center gap-1"><svg xmlns="http://www.w3.org/200xl" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>Confirm Withdrawal</button>
+                      <button type="submit" style={{ fontFamily: '"Unbounded", sans-serif' }} className="w-full py-2.5 bg-[#047857] text-white font-bold text-[10px] uppercase tracking-wider rounded-xl shadow-xs transition flex items-center justify-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>Confirm Withdrawal</button>
                     </form>
                   ) : (
                     <p className="text-xs text-[#94A3B8] text-center py-2.5 border border-dashed border-[#E2E8F0] rounded-xl font-bold">Withdrawals closed.</p>
@@ -810,7 +912,7 @@ export default function App() {
                       <div className="flex justify-between border-b border-[#A7F3D0] pb-2"><span>Wins:</span><span className="font-black">{winsCount}</span></div>
                       <div className="flex justify-between"><span>Losses:</span><span className="font-black text-rose-800">{lossesCount}</span></div>
                     </div>
-                    <button onClick={() => setView('dashboard')} style={{ fontFamily: '"Unbounded", sans-serif' }} className="w-full py-2.5 bg-[#047857] text-white font-bold text-[10px] uppercase rounded-xl shadow-xs transition flex items-center justify-center gap-1"><svg xmlns="http://www.w3.org/2000/xl" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" /></svg>Go Back to Main Page</button>
+                    <button onClick={() => setView('dashboard')} style={{ fontFamily: '"Unbounded", sans-serif' }} className="w-full py-2.5 bg-[#047857] text-white font-bold text-[10px] uppercase rounded-xl shadow-xs transition flex items-center justify-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" /></svg>Go Back to Main Page</button>
                   </div>
                 )}
 
