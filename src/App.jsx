@@ -17,10 +17,8 @@ const db = getDatabase(app);
 export default function App() {
   // --- 🪄 INJECT PREMIUM FONTS, TAB NAME & DYNAMIC FAVICON ON MOUNT ---
   useEffect(() => {
-    // Tab Name වෙනස් කිරීම
     document.title = "CompoundPro";
 
-    // Dynamic Favicon (Green Circle) එකක් Inject කිරීම
     const canvas = document.createElement('canvas');
     canvas.width = 32;
     canvas.height = 32;
@@ -28,7 +26,7 @@ export default function App() {
     if (ctx) {
       ctx.beginPath();
       ctx.arc(16, 16, 14, 0, 2 * Math.PI, false);
-      ctx.fillStyle = '#10B981'; // Premium Green
+      ctx.fillStyle = '#10B981'; 
       ctx.fill();
     }
     const linkFavicon = document.querySelector("link[rel*='icon']") || document.createElement('link');
@@ -37,7 +35,6 @@ export default function App() {
     linkFavicon.href = canvas.toDataURL("image/x-icon");
     document.head.appendChild(linkFavicon);
 
-    // Fonts Load කිරීම
     const link1 = document.createElement('link');
     link1.rel = 'preconnect';
     link1.href = 'https://fonts.googleapis.com';
@@ -56,11 +53,11 @@ export default function App() {
 
   // --- 🔒 PASSWORDS DATABASE FOR 5 USERS ---
   const passwordsDatabase = {
-    "trader123": { id: "trader1", username: "michael_fx", name: "Michael", initial: 100 },
-    "chenu456": { id: "trader2", username: "chenu_traders", name: "Chenura", initial: 500 },
-    "rachitha789": { id: "trader3", username: "rachitha_pip", name: "Rachitha", initial: 200 },
-    "alpha101": { id: "trader4", username: "alpha_scalper", name: "Amila", initial: 300 },
-    "kasun2026": { id: "trader5", username: "risk_manager", name: "Kasun", initial: 1000 }
+    "Chenura": { id: "trader1", username: "chenura", name: "Chenura" },
+    "Rachitha": { id: "trader2", username: "raxir", name: "Rachitha" },
+    "Theekshana": { id: "trader3", username: "nepu", name: "Theekshana" },
+    "Ayesh": { id: "trader4", username: "ayesh", name: "Ayesh" },
+    "Dasun": { id: "trader5", username: "dasun", name: "Dasun" }
   };
 
   // Auth States
@@ -349,7 +346,6 @@ export default function App() {
   // ---------------- 🔒 VIEW 1: LOGIN PORTAL ----------------
   if (!isAuthenticated) {
     return (
-      // 📝 background inline SVG grid pattern එකක් දමා White + Green abstract lining හැදුවා
       <div 
         style={{ 
           fontFamily: '"Montserrat", sans-serif',
@@ -358,6 +354,7 @@ export default function App() {
         }} 
         className="min-h-screen text-[#1E293B] flex flex-col items-center justify-center p-4 relative"
       >
+        {/* 🔒 Master Clean Credentials Box (No Passwords List Below) */}
         <div className="w-full max-w-md bg-white/95 backdrop-blur-md border border-[#E2E8F0] p-8 rounded-3xl shadow-xl space-y-6 z-10">
           <div className="text-center">
             <div className="w-14 h-14 rounded-full bg-[#10B981] flex items-center justify-center text-white mx-auto mb-4 shadow-md">
@@ -385,15 +382,8 @@ export default function App() {
               {!isLoadingData && <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg>}
             </button>
           </form>
-
-          <div className="bg-[#F8FAFC] border border-[#E2E8F0] p-4 rounded-2xl text-xs text-[#64748B] space-y-1 font-mono">
-            <span className="font-bold text-[#334155] block uppercase tracking-tight font-sans mb-1">🔑 Passwords:</span>
-            <p>• Michael: <code className="font-bold text-[#047857]">trader123</code></p>
-            <p>• Chenura: <code className="font-bold text-[#047857]">chenu456</code></p>
-          </div>
         </div>
 
-        {/* 📝 Login Page Copyright Footer */}
         <footer className="mt-8 text-center text-[11px] text-[#94A3B8] font-semibold z-10">
           © 2026 CompoundPro. Designed by <span className="text-slate-600 font-bold">ChenuraDeSilva</span>
         </footer>
@@ -512,8 +502,6 @@ export default function App() {
             </div>
           </div>
           <button onClick={handleLogoutAction} className="w-full py-2.5 border border-rose-200 bg-rose-50/40 hover:bg-rose-50 text-rose-600 font-bold text-xs rounded-xl uppercase tracking-wider transition flex items-center justify-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" /></svg>Log Out</button>
-          
-          {/* 📝 Sidebar Copyright Footer */}
           <p className="text-[10px] text-[#94A3B8] text-center pt-2 font-semibold">
             © 2026 Designed by <span className="text-slate-600 font-bold">ChenuraDeSilva</span>
           </p>
@@ -794,7 +782,7 @@ export default function App() {
                   {activePlan.status === 'Active' ? (
                     <form onSubmit={handleWithdraw} className="space-y-3">
                       <input type="number" step="any" value={withdrawalInput} onChange={(e) => setWithdrawalInput(e.target.value)} placeholder="Amount to withdraw ($)" className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3 text-sm font-semibold text-[#0F172A]" min="0.01" max={activePlan.currentBalance} />
-                      <button type="submit" style={{ fontFamily: '"Unbounded", sans-serif' }} className="w-full py-2.5 bg-[#047857] text-white font-bold text-[10px] uppercase tracking-wider rounded-xl shadow-xs transition flex items-center justify-center gap-1"><svg xmlns="http://www.w3.org/2000/xl" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>Confirm Withdrawal</button>
+                      <button type="submit" style={{ fontFamily: '"Unbounded", sans-serif' }} className="w-full py-2.5 bg-[#047857] text-white font-bold text-[10px] uppercase tracking-wider rounded-xl shadow-xs transition flex items-center justify-center gap-1"><svg xmlns="http://www.w3.org/200xl" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>Confirm Withdrawal</button>
                     </form>
                   ) : (
                     <p className="text-xs text-[#94A3B8] text-center py-2.5 border border-dashed border-[#E2E8F0] rounded-xl font-bold">Withdrawals closed.</p>
