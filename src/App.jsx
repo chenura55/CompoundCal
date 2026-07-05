@@ -191,6 +191,7 @@ export default function App() {
     setCustomAlert(prev => ({ ...prev, isOpen: false }));
   };
 
+  // --- 🛠️ FIX APPLIED FOR Year STRING HANDLING IN THE SYSTEM GENERATION MATRIX ---
   const handleExportSessionCSV = () => {
     if (!activePlan || tradesHistory.length === 0) {
       triggerPopupAlert('No Data', 'You do not have any trades logged in this plan yet!', 'warning');
@@ -201,7 +202,9 @@ export default function App() {
     csvContent += "Trade Number,Date,Starting Balance,Money At Risk,Risk Reward Ratio,Result,Gain or Loss,Ending Balance,Note\n";
 
     tradesHistory.forEach(t => {
-      const row = `${t.tradeNum},${t.date},${t.startingBalance.toFixed(2)},${t.riskAmount.toFixed(2)},1:${t.rewardRatio},${t.status},${t.payout.toFixed(2)},${t.endingBalance.toFixed(2)},"${t.note.replace(/"/g, '""')}"`;
+      // Clean dates that might be missing the commas or years cleanly when parsed dynamically by external platforms
+      const cleanDate = t.date.includes(',') ? t.date : `${t.date}, 2026`;
+      const row = `${t.tradeNum},"${cleanDate}",${t.startingBalance.toFixed(2)},${t.riskAmount.toFixed(2)},1:${t.rewardRatio},${t.status},${t.payout.toFixed(2)},${t.endingBalance.toFixed(2)},"${t.note.replace(/"/g, '""')}"`;
       csvContent += row + "\n";
     });
 
@@ -324,7 +327,6 @@ export default function App() {
     
     const newEndingBalance = Math.round((currentBalance + payout) * 100) / 100;
     
-    // --- 📅 ASSURES FULL CHRONOLOGICAL DATE WITH THE YEAR IS ALWAYS FORMATTED CORRECTLY ---
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const now = new Date();
     const day = String(now.getDate()).padStart(2, '0');
@@ -717,7 +719,7 @@ export default function App() {
                 <div className="bg-white border border-[#E2E8F0] p-6 rounded-2xl shadow-xs flex flex-col justify-between min-h-[120px]">
                   <div className="flex justify-between items-start">
                     <span className="text-xs text-[#64748B] block font-bold uppercase tracking-wider">Active Plans</span>
-                    <div className="text-[#10B981]"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 9.75h8.25L9.75 21.75 12 14.25H3.75z" /></svg></div>
+                    <div className="text-[#10B981]"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 9.75h8.25L9.75 21.75 12 14.25H3.75z" /></svg></div>
                   </div>
                   <span style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-3xl font-bold text-[#0F172A] mt-2">{currentTraderPlans.filter(p => p.status === 'Active').length}</span>
                 </div>
@@ -896,7 +898,7 @@ export default function App() {
 
                   {/* WITHDRAW CASH INTERFACE */}
                   <div className="bg-white border border-[#E2E8F0] p-5 rounded-2xl shadow-sm">
-                    <h3 style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-xs font-bold text-[#0F172A] uppercase mb-3 flex items-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-4 h-4 text-[#047857]"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-5.625 3.512A2.25 2.25 0 0 1 2.25 18V6M21.75 18.25a2.25 2.25 0 0 1-2.25 2.25H4.5M21.75 18V6c0-.98-.79-1.75-1.75-1.75H4.5" /></svg>Withdraw Money</h3>
+                    <h3 style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-xs font-bold text-[#0F172A] uppercase mb-3 flex items-center gap-1.5"><svg xmlns="http://www.w3.org/2000/xl" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-4 h-4 text-[#047857]"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-5.625 3.512A2.25 2.25 0 0 1 2.25 18V6M21.75 18.25a2.25 2.25 0 0 1-2.25 2.25H4.5M21.75 18V6c0-.98-.79-1.75-1.75-1.75H4.5" /></svg>Withdraw Money</h3>
                     {activePlan.status === 'Active' ? (
                       <form onSubmit={handleWithdraw} className="space-y-3">
                         <input type="number" step="any" value={withdrawalInput} onChange={(e) => setWithdrawalInput(e.target.value)} placeholder="Amount to withdraw ($)" className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3 text-sm font-semibold text-[#0F172A]" min="0.01" max={activePlan.currentBalance} />
