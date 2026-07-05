@@ -324,10 +324,11 @@ export default function App() {
     
     const newEndingBalance = Math.round((currentBalance + payout) * 100) / 100;
     
+    // --- 📅 INCORPORATED YEAR INTO THE CHRONOLOGICAL DATE FORMATTER ---
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const now = new Date();
     const day = String(now.getDate()).padStart(2, '0');
-    const formattedDate = `${months[now.getMonth()]} ${day}`;
+    const formattedDate = `${months[now.getMonth()]} ${day}, ${now.getFullYear()}`;
     
     const loggedTrade = {
       id: Date.now(),
@@ -355,6 +356,34 @@ export default function App() {
       [currentUser.id]: prev[currentUser.id].map(p => p.id === activePlan.id ? updatedPlan : p)
     }));
     setTradeNote('');
+  };
+
+  // --- 🛠️ UNDO LAST TRADE HANDLER TRIGGER SYSTEM ---
+  const handleUndoLastTrade = (tradeId) => {
+    if (tradesHistory.length === 0) return;
+    
+    const lastLoggedTrade = tradesHistory[tradesHistory.length - 1];
+    if (lastLoggedTrade.id !== tradeId) return;
+
+    triggerPopupAlert(
+      'Undo Last Trade',
+      `Are you sure you want to remove Trade #${lastLoggedTrade.tradeNum}? This will revert your balance back to $${lastLoggedTrade.startingBalance.toFixed(2)}.`,
+      'warning',
+      () => {
+        const revisedHistory = tradesHistory.slice(0, -1);
+        const revisedPlan = {
+          ...activePlan,
+          currentBalance: lastLoggedTrade.startingBalance,
+          tradesHistory: revisedHistory
+        };
+
+        setActivePlan(revisedPlan);
+        setAllPlans(prev => ({
+          ...prev,
+          [currentUser.id]: prev[currentUser.id].map(p => p.id === activePlan.id ? revisedPlan : p)
+        }));
+      }
+    );
   };
 
   const handleWithdraw = (e) => {
@@ -524,7 +553,7 @@ export default function App() {
                 <>
                   <button onClick={() => { customAlert.action(); closePopupAlert(); }} style={{ fontFamily: '"Unbounded", sans-serif' }} className="px-4 py-2.5 bg-rose-600 text-white font-bold text-[10px] rounded-xl uppercase flex items-center gap-1">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.34 9m-4.72 0-.34-9m9.49-5.4-.78 11.44a2.25 2.25 0 0 1-2.243 2.11H8.084a2.25 2.25 0 0 1-2.244-2.11L5.06 4.39M9.25 4.392V3.75M14.25 4.392V3.75M19.5 4.392V3.75M4.75 4.392h14.5M4.75 4.392v16.108A1.25 1.25 0 0 0 6 21.75h12A1.25 1.25 0 0 0 19.25 20.5V4.392" /></svg>
-                    Confirm Delete
+                    Confirm Action
                   </button>
                   <button onClick={closePopupAlert} className="px-4 py-2.5 border border-[#E2E8F0] bg-white text-slate-600 font-bold text-[10px] rounded-xl uppercase">Cancel</button>
                 </>
@@ -682,7 +711,7 @@ export default function App() {
                 <div className="bg-[#047857] text-white p-6 rounded-2xl shadow-xs flex flex-col justify-between min-h-[120px]">
                   <div className="flex justify-between items-start">
                     <span className="text-xs text-[#A7F3D0] block font-bold uppercase tracking-wider">Total Plans</span>
-                    <div className="text-[#A7F3D0]"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.03 0 1.9.793 1.993 1.81A48.226 48.226 0 0 1 18 4.084m-5.8 0A48.197 48.197 0 0 0 12 4.084m0 0c-1.135.094-1.976 1.057-1.976 2.192V16.5A2.25 2.25 0 0 0 12 18.75h.375m-9.303-3.376C1.83 14.124 1.5 13.1 1.5 12c0-4.97 4.03;9 9-9a8.96 8.96 0 0 1 5.433 1.83" /></svg></div>
+                    <div className="text-[#A7F3D0]"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.03 0 1.9.793 1.993 1.81A48.226 48.226 0 0 1 18 4.084m-5.8 0A48.197 48.197 0 0 0 12 4.084m0 0c-1.135.094-1.976 1.057-1.976 2.192V16.5A2.25 2.25 0 0 0 12 18.75h.375m-9.303-3.376C1.83 14.124 1.5 13.1 1.5 12c0-4.97 4.03-9 9-9a8.96 8.96 0 0 1 5.433 1.83" /></svg></div>
                   </div>
                   <span style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-3xl font-bold tracking-tight mt-2">{currentTraderPlans.length}</span>
                 </div>
@@ -973,21 +1002,35 @@ export default function App() {
                           <th className="p-4">Ratio</th>
                           <th className="p-4">Total Profit/Loss</th>
                           <th className="p-4">Ending Balance</th>
+                          <th className="p-4 text-center">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#F1F5F9] text-[#334155]">
-                        {tradesHistory.slice().map((t) => (
+                        {tradesHistory.slice().map((t, idx) => (
                           <tr key={t.id} className={`transition ${t.status === 'Win' ? 'bg-[#E6F4EA]/15' : 'bg-rose-50/15'}`}>
                             <td className="p-4 text-[#94A3B8] font-bold">#{t.tradeNum}</td>
                             <td className="p-4 text-xs font-mono text-slate-500">{t.date}</td>
                             <td className="p-4 font-medium text-slate-600">${t.startingBalance.toFixed(2)}</td>
                             <td className="p-4 text-rose-700/80">${t.riskAmount.toFixed(2)}</td>
                             <td className="p-4"><span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${t.status === 'Win' ? 'bg-[#E6F4EA] text-[#065F46]' : 'bg-rose-100 text-rose-700'}`}>{t.status === 'Win' ? `WIN (1:${t.rewardRatio})` : 'LOSS'}</span></td>
-                            {/* --- CORRECTED REFERENCE PROPERTY LINK HERE --- */}
                             <td className={`p-4 font-bold ${t.payout > 0 ? 'text-[#047857]' : 'text-rose-700'}`}>
                               {t.payout > 0 ? `+$${t.payout.toFixed(2)}` : `-$${Math.abs(t.payout).toFixed(2)}`}
                             </td>
                             <td className="p-4 font-bold text-[#0F172A]">${t.endingBalance.toFixed(2)}</td>
+                            <td className="p-4 text-center">
+                              {/* --- INTERACTIVE ACTION COLUMN FEATURING DYNAMIC UNDO BUTTONS ENGINE --- */}
+                              {idx === 0 && activePlan.status === 'Active' ? (
+                                <button 
+                                  onClick={() => handleUndoLastTrade(t.id)} 
+                                  title="Undo Last Trade"
+                                  className="px-2.5 py-1 text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-lg transition transform hover:scale-105 active:scale-95 flex items-center gap-1 mx-auto"
+                                >
+                                  <span></span> Undo
+                                </button>
+                              ) : (
+                                <span className="text-xs text-slate-300 select-none italic font-normal">Locked</span>
+                              )}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
