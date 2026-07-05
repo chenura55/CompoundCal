@@ -332,8 +332,11 @@ export default function App() {
     }
     
     const newEndingBalance = Math.round((currentBalance + payout) * 100) / 100;
+    
+    // --- 📅 FORMAT DATE WITH 3-LETTER MONTH + DAY NAME ---
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const now = new Date();
-    const formattedDate = `${now.getMonth() + 1}/${now.getDate()}`;
+    const formattedDate = `${months[now.getMonth()]} ${now.getDate()}`;
     
     const loggedTrade = {
       id: Date.now(),
