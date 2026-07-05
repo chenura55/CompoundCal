@@ -17,7 +17,7 @@ const db = getDatabase(app);
 const SESSION_TIMEOUT_MS = 6 * 60 * 60 * 1000; // 6 Hours
 
 export default function App() {
-  // --- 🪄 INJECT PREMIUM FONTS, TAB NAME & DYNAMIC FAVICON ON MOUNT ---
+  // --- 🪄 INJECT PREMIUM FONTS, TAB NAME & FAVICON ---
   useEffect(() => {
     document.title = "CompoundPro";
 
@@ -53,7 +53,7 @@ export default function App() {
     document.head.appendChild(link3);
   }, []);
 
-  // --- 🔒 PASSWORDS DATABASE FOR 5 USERS ---
+  // --- 🔒 PASSWORDS FOR 5 USERS ---
   const passwordsDatabase = {
     "Chenura$120": { id: "trader1", username: "chenura", name: "Chenura" },
     "Rachiya@345": { id: "trader2", username: "raxir", name: "Rachitha" },
@@ -62,7 +62,7 @@ export default function App() {
     "Dassa@@1234": { id: "trader5", username: "dasun", name: "Dasun" }
   };
 
-  // --- PERSISTED INITIAL STATES ON REFRESH ---
+  // --- SAVE STATES ON PAGE REFRESH ---
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     const savedAuth = localStorage.getItem('cp_isAuthenticated');
     const loginTime = localStorage.getItem('cp_loginTimestamp');
@@ -96,24 +96,21 @@ export default function App() {
     return plan ? JSON.parse(plan) : null;
   });
 
-  // Auth Layout States
   const [passwordInput, setPasswordInput] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
-  
-  // Navigation & Mobile Menu
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
-  // Popup Modal Alert State
+  // Custom Alert Popups
   const [customAlert, setCustomAlert] = useState({ isOpen: false, type: 'info', title: '', message: '', action: null });
   
-  // Interactive Reward Selection Modal
+  // Win Ratio Selector Popup
   const [rewardSelectionModal, setRewardSelectionModal] = useState({ isOpen: false, resolve: null });
 
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [isInitialSyncDone, setIsInitialSyncDone] = useState(false);
 
-  // Sync state variables to LocalStorage to handle manual page refreshing safely
+  // Sync to local storage
   useEffect(() => {
     localStorage.setItem('cp_isAuthenticated', isAuthenticated ? 'true' : 'false');
     localStorage.setItem('cp_currentView', view);
@@ -122,7 +119,7 @@ export default function App() {
     localStorage.setItem('cp_allPlans', JSON.stringify(allPlans));
   }, [isAuthenticated, view, currentUser, activePlan, allPlans]);
 
-  // Initial load balance sync logic on complete hard refresh cycles
+  // Load data from Firebase on refresh
   useEffect(() => {
     const fetchStoredDataOnRefresh = async () => {
       if (isAuthenticated && currentUser) {
@@ -139,7 +136,7 @@ export default function App() {
             }
           }
         } catch (e) {
-          console.error("Failed to fetch fresh dashboard states on mount refresh", e);
+          console.error("Error loading data from database:", e);
         } finally {
           setIsInitialSyncDone(true);
         }
@@ -150,7 +147,7 @@ export default function App() {
     fetchStoredDataOnRefresh();
   }, [isAuthenticated]);
 
-  // 🔁 AUTO-SAVE LOOP TO FIREBASE (Only triggers AFTER initial database load verification complete)
+  // Auto-save data to Firebase
   useEffect(() => {
     const saveToFirebase = async () => {
       if (currentUser && isAuthenticated && isInitialSyncDone) {
@@ -158,21 +155,21 @@ export default function App() {
           const userRef = ref(db, "compoundpro_vault/" + currentUser.id);
           await set(userRef, allPlans);
         } catch (error) {
-          console.error("Error auto-saving to Firebase: ", error);
+          console.error("Error saving data to database:", error);
         }
       }
     };
     saveToFirebase();
   }, [allPlans, currentUser, isAuthenticated, isInitialSyncDone]);
 
-  // ⏳ SESSION EXPIRY BACKGROUND TRACKER
+  // Session timer check
   useEffect(() => {
     if (!isAuthenticated) return;
 
     const checkSessionExpiry = () => {
       const loginTime = localStorage.getItem('cp_loginTimestamp');
       if (loginTime && (Date.now() - parseInt(loginTime, 10) >= SESSION_TIMEOUT_MS)) {
-        triggerPopupAlert('Session Expired', 'Your high-security portal window has timed out. Logging out.', 'info');
+        triggerPopupAlert('Session Expired', 'Your login session has timed out. Please login again.', 'info');
         handleLogoutAction();
       }
     };
@@ -181,14 +178,12 @@ export default function App() {
     return () => clearInterval(interval);
   }, [isAuthenticated]);
 
-  // Dynamic Array Handlers Extracted from Active Plan Scope safely
   const tradesHistory = activePlan ? activePlan.tradesHistory || [] : [];
   const withdrawals = activePlan ? activePlan.withdrawals || [] : [];
 
   const [withdrawalInput, setWithdrawalInput] = useState('');
   const [tradeNote, setTradeNote] = useState('');
 
-  // Form Creation Inputs
   const [planName, setPlanName] = useState('');
   const [initialBalance, setInitialBalance] = useState('100');
   const [riskPercent, setRiskPercent] = useState(20); 
@@ -203,15 +198,15 @@ export default function App() {
     setCustomAlert(prev => ({ ...prev, isOpen: false }));
   };
 
-  // --- 📥 DATA EXPORT METHOD ---
+  // --- EXPORT TRADES TO EXCEL/CSV ---
   const handleExportSessionCSV = () => {
     if (!activePlan || tradesHistory.length === 0) {
-      triggerPopupAlert('No Data', 'There are no closed trade logs inside this active session to export yet!', 'warning');
+      triggerPopupAlert('No Data', 'You do not have any trades logged in this plan yet!', 'warning');
       return;
     }
 
     let csvContent = "data:text/csv;charset=utf-8,";
-    csvContent += "Trade Number,Date,Starting Balance,Money At Risk,Reward Selected,Result State,Payout Gain/Loss,Ending Balance,Setup Note\n";
+    csvContent += "Trade Number,Date,Starting Balance,Money At Risk,Risk Reward Ratio,Result,Gain or Loss,Ending Balance,Note\n";
 
     tradesHistory.forEach(t => {
       const row = `${t.tradeNum},${t.date},${t.startingBalance.toFixed(2)},${t.riskAmount.toFixed(2)},1:${t.rewardRatio},${t.status},${t.payout.toFixed(2)},${t.endingBalance.toFixed(2)},"${t.note.replace(/"/g, '""')}"`;
@@ -226,10 +221,10 @@ export default function App() {
     link.click();
     document.body.removeChild(link);
 
-    triggerPopupAlert('Exported!', 'Your session history log file has been downloaded successfully as a spreadsheet CSV file.', 'success');
+    triggerPopupAlert('Exported!', 'Your trade history has been downloaded successfully as a CSV file.', 'success');
   };
 
-  // 📥 FETCH DATA LOOP ON LOGIN
+  // --- LOGIN HANDLE ---
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setLoginError('');
@@ -257,8 +252,8 @@ export default function App() {
         setPasswordInput('');
         setIsInitialSyncDone(true);
       } catch (error) {
-        console.error("Firebase Realtime DB fetch error: ", error);
-        setLoginError('Database එකට සම්බන්ධ වෙන්න බැරි වුණා.');
+        console.error("Database connection error:", error);
+        setLoginError('Could not connect to the database.');
       } finally {
         setIsLoadingData(false);
       }
@@ -311,7 +306,6 @@ export default function App() {
     setIsMobileMenuOpen(false);
   };
 
-  // Open prompt custom layout engine for selective dynamic win scaling 
   const askRewardMultiple = () => {
     return new Promise((resolve) => {
       setRewardSelectionModal({ isOpen: true, resolve });
@@ -321,14 +315,13 @@ export default function App() {
   const handleExecuteCurrentTrade = async (status) => {
     if (!activePlan || activePlan.status === 'Ended') return;
     
-    let chosenRatio = 2; // Default baseline global fallback multiplier
+    let chosenRatio = 2; 
     const currentBalance = activePlan.currentBalance;
     const riskAmount = currentBalance * (activePlan.riskPercent / 100);
 
     if (status === 'Win') {
-      // Async wait context framework loading dynamic user option
       chosenRatio = await askRewardMultiple();
-      if (!chosenRatio) return; // User exited choice modal
+      if (!chosenRatio) return; 
     }
 
     let payout = 0;
@@ -352,7 +345,7 @@ export default function App() {
       status: status,
       payout: payout,
       endingBalance: newEndingBalance,
-      note: tradeNote || (status === 'Win' ? `Won with 1:${chosenRatio}` : 'Trade saved')
+      note: tradeNote || (status === 'Win' ? `Won with 1:${chosenRatio} RR` : 'Lost trade')
     };
 
     const updatedHistory = [...tradesHistory, loggedTrade];
@@ -374,7 +367,7 @@ export default function App() {
     e.preventDefault();
     const amount = parseFloat(withdrawalInput);
     if (!amount || amount <= 0 || amount > activePlan.currentBalance) {
-      triggerPopupAlert('Balance Low', "You do not have enough money in your current account to withdraw this amount!", 'warning');
+      triggerPopupAlert('Low Balance', "You do not have enough money in your account balance to withdraw this amount!", 'warning');
       return;
     }
     const newBalance = Math.round((activePlan.currentBalance - amount) * 100) / 100;
@@ -397,13 +390,13 @@ export default function App() {
       [currentUser.id]: prev[currentUser.id].map(p => p.id === activePlan.id ? updatedPlan : p)
     }));
     setWithdrawalInput('');
-    triggerPopupAlert('Withdraw Done', `Successfully withdrew $${amount.toLocaleString()} from your active plan balance pool.`, 'success');
+    triggerPopupAlert('Withdrawal Done', `Successfully withdrew $${amount.toLocaleString()} from your plan balance.`, 'success');
   };
 
   const handleDeleteSession = (id) => {
     triggerPopupAlert(
       'Confirm Delete',
-      'Are you absolutely sure you want to permanently erase this trading plan framework loop archive?',
+      'Are you sure you want to permanently delete this trading plan? This cannot be undone.',
       'danger',
       () => {
         setAllPlans(prev => ({
@@ -424,28 +417,23 @@ export default function App() {
       ...prev,
       [currentUser.id]: prev[currentUser.id].map(p => p.id === activePlan.id ? endedPlan : p)
     }));
-    triggerPopupAlert('Plan Frozen', 'This compounding tracking sheet balance loop is now locked.', 'info');
+    triggerPopupAlert('Plan Frozen', 'This trading plan is now locked and frozen.', 'info');
   };
 
   const nextRiskAmt = (activePlan?.currentBalance || 0) * ((activePlan?.riskPercent || 20) / 100);
   
-  // --- 📈 CHART ARCHITECTURE AND PLOTTING CALCULATIONS ---
+  // --- CHART LOGIC VARIABLES ---
   const seedBalance = activePlan?.initialBalance || 100;
-  
-  // Array conversion maps output balances to actual growth percentages relative to base capital
   const growthHistory = [0, ...tradesHistory.map(t => ((t.endingBalance - seedBalance) / seedBalance) * 100)];
-  
-  // Construct explicit date array maps starting from point 0 setup
   const dateLabels = ["Start", ...tradesHistory.map(t => t.date || "")];
 
   const maxGrowth = Math.max(...growthHistory, 50);
   const minGrowth = Math.min(...growthHistory, -20);
   const growthRange = maxGrowth - minGrowth > 0 ? maxGrowth - minGrowth : 1;
 
-  // Linear SVG scale plotting points transformation loop engine mapping percentage paths
   const chartPoints = growthHistory.map((g, i) => {
-    const x = (i / Math.max(growthHistory.length - 1, 1)) * 440 + 45; // Leave padding area spaces left/right
-    const y = 130 - ((g - minGrowth) / growthRange) * 100; // Constrain visually between coordinates boundaries
+    const x = (i / Math.max(growthHistory.length - 1, 1)) * 440 + 45; 
+    const y = 130 - ((g - minGrowth) / growthRange) * 100; 
     return `${x},${y}`;
   }).join(' ');
 
@@ -455,7 +443,7 @@ export default function App() {
   const winRatePercent = totalTradesCount > 0 ? Math.round((winsCount / totalTradesCount) * 100) : 0;
   const lossRatePercent = totalTradesCount > 0 ? Math.round((lossesCount / totalTradesCount) * 100) : 0;
 
-  // ---------------- 🔒 VIEW 1: LOGIN PORTAL ----------------
+  // ---------------- 🔒 VIEW 1: LOGIN PAGE ----------------
   if (!isAuthenticated) {
     return (
       <div 
@@ -506,7 +494,7 @@ export default function App() {
               </div>
             </div>
             <button type="submit" disabled={isLoadingData} style={{ fontFamily: '"Unbounded", sans-serif' }} className="w-full py-3.5 bg-[#047857] hover:bg-[#065F46] text-white font-bold text-xs uppercase tracking-wider rounded-xl transition mt-2 flex items-center justify-center gap-2 shadow-md">
-              {isLoadingData ? "Connecting to Realtime DB..." : "Login Now"}
+              {isLoadingData ? "Connecting to Database..." : "Login Now"}
               {!isLoadingData && <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg>}
             </button>
           </form>
@@ -519,11 +507,11 @@ export default function App() {
     );
   }
 
-  // ---------------- 🎨 VIEW 2: DASHBOARD MAIN SCREEN ----------------
+  // ---------------- 🎨 VIEW 2: APP MAIN INTERFACE ----------------
   return (
     <div style={{ fontFamily: '"Montserrat", sans-serif' }} className="h-screen w-full bg-[#F4F6F5] text-[#1E293B] flex flex-col md:flex-row select-none overflow-hidden relative">
       
-      {/* ATTRACTIVE ALERTS POPUP MODAL */}
+      {/* ALERTS MODAL POPUP */}
       {customAlert.isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="bg-white border border-[#E2E8F0] p-6 rounded-3xl w-full max-w-sm shadow-xl text-center">
@@ -550,8 +538,7 @@ export default function App() {
                 </>
               ) : (
                 <button onClick={closePopupAlert} style={{ fontFamily: '"Unbounded", sans-serif' }} className="px-6 py-2.5 bg-[#047857] text-white font-bold text-[10px] rounded-xl uppercase shadow-xs w-full flex items-center justify-center gap-1">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
-                  Okay, Done
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>Okay
                 </button>
               )}
             </div>
@@ -559,15 +546,15 @@ export default function App() {
         </div>
       )}
 
-      {/* 🎰 RISK TO REWARD INTERACTIVE SELECTION DIALOG */}
+      {/* RISK REWARD POPUP FOR WINNING TRADES */}
       {rewardSelectionModal.isOpen && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs">
-          <div className="bg-white border-2 border-[#10B981] p-6 rounded-3xl w-full max-w-sm shadow-2xl text-center animate-fadeIn">
+          <div className="bg-white border-2 border-[#10B981] p-6 rounded-3xl w-full max-w-sm shadow-2xl text-center">
             <div className="w-12 h-12 rounded-full bg-[#E6F4EA] text-[#047857] flex items-center justify-center mx-auto mb-3">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 0 5.814-5.518l2.74-8.74m0 0-5.94 1.15m5.94-1.15-1.15 5.94M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
             </div>
-            <h3 style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-sm font-bold text-[#0F172A] mb-1 uppercase tracking-wide">Target Reward Multiple</h3>
-            <p className="text-xs font-semibold text-[#64748B] mb-5">Select your executed trade risk multiple value below</p>
+            <h3 style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-sm font-bold text-[#0F172A] mb-1 uppercase tracking-wide">Choose Risk Reward Ratio</h3>
+            <p className="text-xs font-semibold text-[#64748B] mb-5">Select your reward multiple for this winning trade:</p>
             
             <div className="grid grid-cols-1 gap-3">
               {[1, 2, 3].map((ratio) => {
@@ -582,8 +569,8 @@ export default function App() {
                     className="group border border-[#E2E8F0] hover:border-[#10B981] bg-[#F8FAFC] hover:bg-[#E6F4EA] p-3.5 rounded-xl transition flex justify-between items-center text-left"
                   >
                     <div>
-                      <span style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-xs font-black block text-[#1E293B] group-hover:text-[#065F46]">Plan Multiple 1:{ratio}</span>
-                      <span className="text-[10px] font-medium text-slate-400 group-hover:text-[#047857]">Target Yield Return</span>
+                      <span style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-xs font-black block text-[#1E293B] group-hover:text-[#065F46]">1:{ratio} Ratio</span>
+                      <span className="text-[10px] font-medium text-slate-400 group-hover:text-[#047857]">Target Return</span>
                     </div>
                     <span className="text-sm font-bold text-[#047857] bg-white px-2.5 py-1 rounded-lg border border-slate-100 shadow-3xs">+${profitProjection.toFixed(2)}</span>
                   </button>
@@ -595,9 +582,9 @@ export default function App() {
                 rewardSelectionModal.resolve(null);
                 setRewardSelectionModal({ isOpen: false, resolve: null });
               }}
-              className="mt-4 w-full text-center text-xs font-bold text-slate-400 hover:text-slate-600 transition pt-1"
+              className="mt-4 w-full text-center text-xs font-bold text-slate-400 hover:text-slate-600 transition"
             >
-              Cancel Entry
+              Cancel
             </button>
           </div>
         </div>
@@ -616,7 +603,7 @@ export default function App() {
         </button>
       </header>
 
-      {/* MOBILE NAV DROPDOWN MENU */}
+      {/* MOBILE MENU NAV */}
       {isMobileMenuOpen && (
         <div className="w-full bg-white border-b border-[#E2E8F0] px-6 py-4 flex flex-col gap-3 md:hidden shadow-lg z-40 fixed top-[65px]">
           <button onClick={() => { setView('dashboard'); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-base text-left ${view === 'dashboard' ? 'bg-[#E6F4EA] text-[#065F46]' : 'text-[#64748B]'}`}>
@@ -645,9 +632,9 @@ export default function App() {
           </div>
 
           <div className="bg-[#E6F4EA] p-3.5 rounded-2xl border border-[#A7F3D0] mb-6 flex items-center gap-2">
-            <div className="text-[#047857]"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21(8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" /></svg></div>
+            <div className="text-[#047857]"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21" /></svg></div>
             <div>
-              <span className="text-[10px] uppercase font-black text-[#065F46] block tracking-wide">Active Account</span>
+              <span className="text-[10px] uppercase font-black text-[#065F46] block tracking-wide">Logged In As</span>
               <p className="text-sm font-black text-[#047857] truncate">@{currentUser.username}</p>
             </div>
           </div>
@@ -670,7 +657,7 @@ export default function App() {
             <div className="w-10 h-10 rounded-full bg-[#E6F4EA] text-[#047857] flex items-center justify-center font-black text-sm uppercase">{currentUser.name.slice(0, 2)}</div>
             <div>
               <p className="text-sm font-black text-[#0F172A]">{currentUser.name}</p>
-              <p className="text-[10px] text-[#94A3B8] font-semibold">Realtime Sync Active</p>
+              <p className="text-[10px] text-[#94A3B8] font-semibold">Online Sync Active</p>
             </div>
           </div>
           <button onClick={handleLogoutAction} className="w-full py-2.5 border border-rose-200 bg-rose-50/40 hover:bg-rose-50 text-rose-600 font-bold text-xs rounded-xl uppercase tracking-wider transition flex items-center justify-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" /></svg>Log Out</button>
@@ -685,7 +672,7 @@ export default function App() {
         
         <header className="flex justify-between items-center mb-6 flex-shrink-0">
           <div>
-            <span className="text-[10px] font-mono font-bold text-[#047857] uppercase tracking-widest bg-[#E6F4EA] px-3 py-1 rounded-md border border-[#A7F3D0] flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse"></span>Vault Connected</span>
+            <span className="text-[10px] font-mono font-bold text-[#047857] uppercase tracking-widest bg-[#E6F4EA] px-3 py-1 rounded-md border border-[#A7F3D0] flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse"></span>Database Connected</span>
             <h1 style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-xl md:text-2xl font-black text-[#0F172A] tracking-tight mt-2">Welcome back, <span className="text-[#047857]">{currentUser.name}</span></h1>
           </div>
           {view !== 'dashboard' && (
@@ -693,10 +680,10 @@ export default function App() {
           )}
         </header>
 
-        {/* --- SCROLLABLE HUB VIEW CONTAINER --- */}
+        {/* --- MAIN SCROLLABLE DASHBOARD VIEW --- */}
         <div className="flex-1 overflow-y-auto pr-1 md:pr-2 custom-scrollbar space-y-6 pb-6">
           
-          {/* --- VIEW 1: HOME MAIN DASHBOARD --- */}
+          {/* --- DASHBOARD HOME VIEW --- */}
           {view === 'dashboard' && (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-5">
@@ -716,7 +703,7 @@ export default function App() {
                 </div>
                 <div className="bg-white border border-[#E2E8F0] p-6 rounded-2xl shadow-xs flex flex-col justify-between min-h-[120px]">
                   <div className="flex justify-between items-start">
-                    <span className="text-xs text-[#64748B] block font-bold uppercase tracking-wider">Total Pool Balance</span>
+                    <span className="text-xs text-[#64748B] block font-bold uppercase tracking-wider">Total Combined Money</span>
                     <div className="text-[#047857]"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818.736.156A3.976 3.976 0 0 0 12 15.399c1.917 0 3.5-1.423 3.5-3.17 0-1.747-1.583-3.17-3.5-3.17-1.737 0-3.185-1.173-3.418-2.735L8.5 6m3.5-1.818.675.143A3.976 3.976 0 0 1 15.5 7.159c0 1.748-1.583 3.17-3.5 3.17-1.737 0-3.185 1.172-3.418 2.734L8.5 13" /></svg></div>
                   </div>
                   <span style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-3xl font-bold text-[#047857] mt-2">${currentTraderPlans.reduce((sum, p) => sum + p.currentBalance, 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
@@ -726,22 +713,22 @@ export default function App() {
               <div className="bg-white border border-[#E2E8F0] rounded-2xl shadow-xs overflow-hidden">
                 <div className="p-5 border-b border-[#F1F5F9] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white">
                   <div>
-                    <h3 style={{ fontFamily: '"Unbounded", sans-serif' }} className="font-bold text-sm text-[#0F172A] uppercase tracking-wide">All Trading Architecture</h3>
-                    <p className="text-xs text-[#64748B] mt-1">Here is the list of all your cloud-secured compounding frameworks.</p>
+                    <h3 style={{ fontFamily: '"Unbounded", sans-serif' }} className="font-bold text-sm text-[#0F172A] uppercase tracking-wide">Your Trading Plans</h3>
+                    <p className="text-xs text-[#64748B] mt-1">Here is the list of all your created trading accounts.</p>
                   </div>
                   <button onClick={() => setView('create')} className="w-full sm:w-auto px-5 py-2.5 bg-[#047857] hover:bg-[#065F46] text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>Create New Plan</button>
                 </div>
                 
                 {currentTraderPlans.length === 0 ? (
-                  <div className="p-16 text-center text-[#94A3B8] text-base font-semibold">No active models found inside the cloud repository core vault.</div>
+                  <div className="p-16 text-center text-[#94A3B8] text-base font-semibold">No trading plans found. Click 'Create New Plan' to start.</div>
                 ) : (
                   <div className="overflow-x-auto w-full">
                     <table className="w-full text-left border-collapse min-w-[700px]">
                       <thead>
                         <tr className="border-b border-[#F1F5F9] text-xs font-bold uppercase tracking-wider text-[#64748B] bg-[#F8FAFC]">
                           <th className="p-4 md:p-5">Plan Name</th>
-                          <th className="p-4 md:p-5">Risk Setup</th>
-                          <th className="p-4 md:p-5">Compounding Scale</th>
+                          <th className="p-4 md:p-5">Risk Setting</th>
+                          <th className="p-4 md:p-5">Target System</th>
                           <th className="p-4 md:p-5">Starting Money</th>
                           <th className="p-4 md:p-5">Current Money</th>
                           <th className="p-4 md:p-5 text-right">Actions</th>
@@ -752,13 +739,13 @@ export default function App() {
                           <tr key={plan.id} className="hover:bg-[#F8FAFC]/60 transition">
                             <td className="p-4 md:p-5 font-bold text-[#0F172A]">{plan.name}</td>
                             <td className="p-4 md:p-5">
-                              <span className="text-xs px-3 py-1 rounded-lg font-bold bg-[#E6F4EA] text-[#065F46]">{plan.riskPercent}% Base Risk</span>
+                              <span className="text-xs px-3 py-1 rounded-lg font-bold bg-[#E6F4EA] text-[#065F46]">{plan.riskPercent}% Risk</span>
                             </td>
-                            <td className="p-4 md:p-5 text-xs text-[#64748B] font-bold">Flexible Dynamic Rewards</td>
+                            <td className="p-4 md:p-5 text-xs text-[#64748B] font-bold">Choose on Win (1:1 - 1:3)</td>
                             <td className="p-4 md:p-5 text-[#64748B]">${plan.initialBalance.toFixed(2)}</td>
                             <td className="p-4 md:p-5 font-bold text-[#047857]">${plan.currentBalance.toFixed(2)}</td>
                             <td className="p-4 md:p-5 text-right flex justify-end gap-2.5">
-                              <button onClick={() => handleLaunchRadar(plan)} style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-[10px] font-black bg-[#E6F4EA] text-[#065F46] px-4 py-2 rounded-xl flex items-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" /></svg>Open Monitor</button>
+                              <button onClick={() => handleLaunchRadar(plan)} style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-[10px] font-black bg-[#E6F4EA] text-[#065F46] px-4 py-2 rounded-xl flex items-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" /></svg>Open Plan</button>
                               <button onClick={() => handleDeleteSession(plan.id)} className="text-xs font-bold bg-[#FFF5F5] text-[#EF4444] px-3 py-2 rounded-xl flex items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.34 9m-4.72 0-.34-9m9.49-5.4-.78 11.44a2.25 2.25 0 0 1-2.243 2.11H8.084a2.25 2.25 0 0 1-2.244-2.11L5.06 4.39M9.25 4.392V3.75M14.25 4.392V3.75M19.5 4.392V3.75M4.75 4.392h14.5M4.75 4.392v16.108A1.25 1.25 0 0 0 6 21.75h12A1.25 1.25 0 0 0 19.25 20.5V4.392" /></svg>Delete</button>
                             </td>
                           </tr>
@@ -771,36 +758,36 @@ export default function App() {
             </>
           )}
 
-          {/* --- VIEW 2: CREATE PLAN --- */}
+          {/* --- VIEW: CREATE PLAN --- */}
           {view === 'create' && (
             <div className="max-w-xl mx-auto bg-white border border-[#E2E8F0] p-6 md:p-8 rounded-2xl shadow-xs">
-              <h2 style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-xs font-bold text-[#0F172A] uppercase tracking-wider mb-6 flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4 text-[#047857]"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>Initialize Compound Plan</h2>
+              <h2 style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-xs font-bold text-[#0F172A] uppercase tracking-wider mb-6 flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4 text-[#047857]"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>Create A New Trading Plan</h2>
               <form onSubmit={handleCreatePlan} className="space-y-6">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] mb-2">Plan Name</label>
-                  <input type="text" value={planName} onChange={(e) => setPlanName(e.target.value)} placeholder="e.g., Mini Account Compound Challenge" className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3.5 text-base focus:outline-none focus:border-[#10B981] text-[#0F172A]" required />
+                  <input type="text" value={planName} onChange={(e) => setPlanName(e.target.value)} placeholder="e.g., My $100 Challenge" className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3.5 text-base focus:outline-none focus:border-[#10B981] text-[#0F172A]" required />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] mb-2">Starting Money Capital Size ($)</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] mb-2">Starting Money ($)</label>
                   <input type="number" step="any" value={initialBalance} onChange={(e) => setInitialBalance(e.target.value)} className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3.5 text-base focus:outline-none focus:border-[#10B981] text-[#0F172A]" min="1" required />
                 </div>
                 <div className="bg-[#F8FAFC] p-5 rounded-xl border border-[#E2E8F0] space-y-3">
                   <div className="flex justify-between items-center text-xs font-bold uppercase tracking-wider text-[#64748B]">
-                    <span className="flex items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m0-10.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.75c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.57-.598-3.75h-.152c-3.196 0-6.1-1.249-8.25-3.286Zm0 13.036h.008v.008H12v-.008Z" /></svg>Base Risk Limit Size</span>
+                    <span className="flex items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m0-10.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.75c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.57-.598-3.75h-.152c-3.196 0-6.1-1.249-8.25-3.286Zm0 13.036h.008v.008H12v-.008Z" /></svg>Risk Amount per Trade</span>
                     <span style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-[#047857] font-black text-base">{riskPercent}% Risk</span>
                   </div>
                   <input type="range" min="1" max="100" value={riskPercent} onChange={(e) => setRiskPercent(e.target.value)} className="w-full accent-[#047857] cursor-pointer h-2.5 bg-gray-200 rounded-lg appearance-none" />
                   <div className="flex justify-between items-center text-xs text-[#94A3B8] font-bold pt-2 border-t border-gray-200/60">
-                    <span>Target Setup:</span>
-                    <span className="text-[#047857] font-bold">Selective Multiples (1:1 / 1:2 / 1:3)</span>
+                    <span>Reward Setup:</span>
+                    <span className="text-[#047857] font-bold">Choose 1:1, 1:2, or 1:3 on each win</span>
                   </div>
                 </div>
-                <button type="submit" style={{ fontFamily: '"Unbounded", sans-serif' }} className="w-full py-4 bg-[#047857] text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-xs flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 0 1-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 0 0 6.16-12.12A14.98 14.98 0 0 0 9.631 8.41m5.96 5.96a14.926 14.926 0 0 1-5.841 2.58m-.119-8.54a6 6 0 0 0-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 0 0-2.58 5.84m2.6-2.7h.01M21 3a16.3 16.3 0 0 0-3.47 3.47m0 0A16.3 16.3 0 0 0 14.06 10" /></svg>Launch Account Loop</button>
+                <button type="submit" style={{ fontFamily: '"Unbounded", sans-serif' }} className="w-full py-4 bg-[#047857] text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-xs flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 0 1-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 0 0 6.16-12.12A14.98 14.98 0 0 0 9.631 8.41m5.96 5.96a14.926 14.926 0 0 1-5.841 2.58m-.119-8.54a6 6 0 0 0-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 0 0-2.58 5.84m2.6-2.7h.01M21 3a16.3 16.3 0 0 0-3.47 3.47m0 0A16.3 16.3 0 0 0 14.06 10" /></svg>Start Plan Now</button>
               </form>
             </div>
           )}
 
-          {/* ---------------- 💡 VIEW 3: ACTIVE SYSTEM MONITOR ---------------- */}
+          {/* --- VIEW: ACTIVE SYSTEM TRACKER --- */}
           {view === 'active' && activePlan && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               
@@ -809,7 +796,7 @@ export default function App() {
                 <div className="bg-white border border-[#E2E8F0] p-6 rounded-2xl shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                   <div>
                     <h2 style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-base font-bold text-[#0F172A]">{activePlan.name}</h2>
-                    <p className="text-xs text-[#64748B] mt-1 font-bold">Base Position Risk: <b className="text-slate-700">{activePlan.riskPercent}%</b> | Targets: <b className="text-slate-700">Dynamic Multiples</b></p>
+                    <p className="text-xs text-[#64748B] mt-1 font-bold">Trade Risk Setup: <b className="text-slate-700">{activePlan.riskPercent}%</b> | Rewards: <b className="text-slate-700">Dynamic Multiples</b></p>
                   </div>
                   <div className="flex gap-2.5 w-full sm:w-auto">
                     <button 
@@ -834,39 +821,39 @@ export default function App() {
                     <span style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-sm md:text-base font-black text-[#047857]">${activePlan.currentBalance.toFixed(2)}</span>
                   </div>
                   <div className="bg-white border border-[#E2E8F0] p-4 rounded-2xl text-center shadow-xs">
-                    <span className="text-[10px] md:text-xs text-[#64748B] font-bold uppercase block mb-1">Trades Logged</span>
+                    <span className="text-[10px] md:text-xs text-[#64748B] font-bold uppercase block mb-1">Total Trades</span>
                     <span style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-sm md:text-base font-bold text-[#1E293B]">{tradesHistory.length}</span>
                   </div>
                 </div>
 
-                {/* ACTION TRIGGER BOX */}
+                {/* LOG NEW TRADE ACTION BOX */}
                 <div className="bg-white border-2 border-[#10B981]/40 p-5 md:p-6 rounded-2xl shadow-xs bg-gradient-to-br from-white to-[#F8FAFC]">
                   <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4">
-                    <span style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-[10px] font-black uppercase text-[#047857] bg-[#E6F4EA] px-3 py-1.5 rounded-lg w-fit flex items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 9.75h8.25L9.75 21.75 12 14.25H3.75z" /></svg>Execute Block: Trade #{tradesHistory.length + 1}</span>
-                    <span className="text-xs text-[#64748B] font-bold">Risk Pool Matrix: <b className="text-rose-700">${nextRiskAmt.toFixed(2)}</b></span>
+                    <span style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-[10px] font-black uppercase text-[#047857] bg-[#E6F4EA] px-3 py-1.5 rounded-lg w-fit flex items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 9.75h8.25L9.75 21.75 12 14.25H3.75z" /></svg>Log Next Trade: Trade #{tradesHistory.length + 1}</span>
+                    <span className="text-xs text-[#64748B] font-bold">Money At Risk: <b className="text-rose-700">${nextRiskAmt.toFixed(2)}</b></span>
                   </div>
 
                   {activePlan.status === 'Active' ? (
                     <div className="space-y-5">
                       <div className="relative">
-                        <input type="text" value={tradeNote} onChange={(e) => setTradeNote(e.target.value)} placeholder="Type a layout setup note for this trade position..." className="w-full bg-white border border-[#E2E8F0] text-sm rounded-xl pl-10 pr-4 py-3.5 focus:outline-none focus:border-[#10B981] text-[#334155] font-semibold" />
+                        <input type="text" value={tradeNote} onChange={(e) => setTradeNote(e.target.value)} placeholder="Type a short note for this trade (optional)..." className="w-full bg-white border border-[#E2E8F0] text-sm rounded-xl pl-10 pr-4 py-3.5 focus:outline-none focus:border-[#10B981] text-[#334155] font-semibold" />
                         <div className="absolute left-3.5 top-4 text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" /></svg></div>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <button onClick={() => handleExecuteCurrentTrade('Win')} style={{ fontFamily: '"Unbounded", sans-serif' }} className="py-4 bg-[#047857] text-white font-bold text-xs uppercase rounded-xl shadow-xs transition flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>Winning Trade (Choose R:R)</button>
-                        <button onClick={() => handleExecuteCurrentTrade('Loss')} style={{ fontFamily: '"Unbounded", sans-serif' }} className="py-4 bg-[#1E293B] text-white font-bold text-xs uppercase rounded-xl transition flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>Losing Trade (-{activePlan.riskPercent}%)</button>
+                        <button onClick={() => handleExecuteCurrentTrade('Win')} style={{ fontFamily: '"Unbounded", sans-serif' }} className="py-4 bg-[#047857] text-white font-bold text-xs uppercase rounded-xl shadow-xs transition flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>I Won This Trade</button>
+                        <button onClick={() => handleExecuteCurrentTrade('Loss')} style={{ fontFamily: '"Unbounded", sans-serif' }} className="py-4 bg-[#1E293B] text-white font-bold text-xs uppercase rounded-xl transition flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>I Lost This Trade (-{activePlan.riskPercent}%)</button>
                       </div>
                     </div>
                   ) : (
-                    <div className="p-5 bg-[#F8FAFC] rounded-xl border border-dashed border-[#E2E8F0] text-center text-sm font-bold text-[#94A3B8] flex items-center justify-center gap-2">Locked Compound Sequence Portal.</div>
+                    <div className="p-5 bg-[#F8FAFC] rounded-xl border border-dashed border-[#E2E8F0] text-center text-sm font-bold text-[#94A3B8] flex items-center justify-center gap-2">This trading plan is frozen and closed.</div>
                   )}
                 </div>
 
-                {/* ADVANCED GRADIENT COMPONENT TRACKING FRAMEWORK CHART LINK */}
+                {/* GRAPH PERFORMANCE CHART ELEMENT */}
                 <div className="bg-white border border-[#E2E8F0] p-5 rounded-2xl shadow-sm">
                   <div className="flex justify-between items-center mb-4">
-                    <h3 style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-xs font-bold text-[#0F172A] uppercase flex items-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-4 h-4 text-[#047857]"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 0 5.814-5.518l2.74-8.74m0 0-5.94 1.15m5.94-1.15-1.15 5.94M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>Compounding Growth Percentage Scale Curve</h3>
-                    <span className="text-[10px] text-gray-400 font-mono">Dynamic Yield Metric</span>
+                    <h3 style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-xs font-bold text-[#0F172A] uppercase flex items-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-4 h-4 text-[#047857]"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 0 5.814-5.518l2.74-8.74m0 0-5.94 1.15m5.94-1.15-1.15 5.94M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>Account Growth Progress Chart</h3>
+                    <span className="text-[10px] text-gray-400 font-mono">Percentage Scale Curve</span>
                   </div>
                   <div className="w-full bg-[#F8FAFC] rounded-xl p-4 border border-[#E2E8F0]">
                     <svg viewBox="0 0 500 160" className="w-full overflow-visible">
@@ -874,12 +861,12 @@ export default function App() {
                         <linearGradient id="curveGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10B981" stopOpacity="0.2"/><stop offset="100%" stopColor="#10B981" stopOpacity="0.0"/></linearGradient>
                       </defs>
                       
-                      {/* Left Side Y Axis Target Threshold Marks */}
+                      {/* Left Side Y Axis Scale Percentages */}
                       <text x="35" y="34" textAnchor="end" fill="#94A3B8" className="text-[9px] font-bold font-mono">{maxGrowth.toFixed(1)}%</text>
                       <text x="35" y="84" textAnchor="end" fill="#94A3B8" className="text-[9px] font-bold font-mono">{((maxGrowth + minGrowth)/2).toFixed(1)}%</text>
                       <text x="35" y="134" textAnchor="end" fill="#94A3B8" className="text-[9px] font-bold font-mono">{minGrowth.toFixed(1)}%</text>
 
-                      {/* Horizontal Grid System Framework Lines */}
+                      {/* Chart Grid Lines */}
                       <line x1="42" y1="30" x2="485" y2="30" stroke="#E2E8F0" strokeWidth="0.6" strokeDasharray="3"/>
                       <line x1="42" y1="80" x2="485" y2="80" stroke="#E2E8F0" strokeWidth="0.6" strokeDasharray="3"/>
                       <line x1="42" y1="130" x2="485" y2="130" stroke="#CBD5E1" strokeWidth="1"/>
@@ -889,7 +876,7 @@ export default function App() {
                           <path d={`M 45,130 L ${chartPoints} L ${chartPoints.split(' ').pop().split(',')[0]},130 Z`} fill="url(#curveGrad)"/>
                           <polyline fill="none" stroke="#047857" strokeWidth="3" points={chartPoints} strokeLinecap="round" strokeLinejoin="round"/>
                           
-                          {/* Chronological X Axis Interface Labels Mapping */}
+                          {/* Chronological X Axis Dates */}
                           {growthHistory.map((g, idx) => {
                             const xCoord = (idx / (growthHistory.length - 1)) * 440 + 45;
                             const yCoord = 130 - ((g - minGrowth) / growthRange) * 100;
@@ -902,25 +889,25 @@ export default function App() {
                           })}
                         </>
                       ) : (
-                        <text x="250" y="80" textAnchor="middle" fill="#94A3B8" className="text-xs font-bold">No compound loop analytics generated yet.</text>
+                        <text x="250" y="80" textAnchor="middle" fill="#94A3B8" className="text-xs font-bold">Log trades to see your progress graph line...</text>
                       )}
                     </svg>
                   </div>
                 </div>
 
-                {/* LOGS TABLE ELEMENT */}
+                {/* HISTORIC LOG TABLE LIST */}
                 <div className="bg-white border border-[#E2E8F0] rounded-2xl shadow-xs overflow-hidden">
                   <div className="p-4 border-b border-[#F1F5F9] bg-white flex items-center gap-2">
                     <div className="text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0z" /></svg></div>
-                    <h3 style={{ fontFamily: '"Unbounded", sans-serif' }} className="font-bold text-xs text-[#64748B] uppercase">Compounded History Registers</h3>
+                    <h3 style={{ fontFamily: '"Unbounded", sans-serif' }} className="font-bold text-xs text-[#64748B] uppercase">All Trade History Logs</h3>
                   </div>
                   {tradesHistory.length === 0 ? (
-                    <div className="p-10 text-center text-[#94A3B8] text-sm font-semibold">No operational telemetry points logged yet.</div>
+                    <div className="p-10 text-center text-[#94A3B8] text-sm font-semibold">No trades saved yet. Click the buttons above to save your wins or losses.</div>
                   ) : (
                     <div className="overflow-x-auto w-full">
                       <table className="w-full text-left border-collapse min-w-[650px] text-sm md:text-base font-semibold">
                         <thead>
-                          <tr className="bg-[#F8FAFC] text-[#64748B] border-b border-[#F1F5F9] font-bold uppercase tracking-wider text-xs"><th className="p-4">Block #</th><th className="p-4">Timeline</th><th className="p-4">Risk Setup</th><th className="p-4">Target Multiple</th><th className="p-4">Outcome Gain/Loss</th><th className="p-4">Net Balance Pool</th></tr>
+                          <tr className="bg-[#F8FAFC] text-[#64748B] border-b border-[#F1F5F9] font-bold uppercase tracking-wider text-xs"><th className="p-4">Trade #</th><th className="p-4">Date</th><th className="p-4">Risked</th><th className="p-4">Ratio Result</th><th className="p-4">Payout Amount</th><th className="p-4">End Balance</th></tr>
                         </thead>
                         <tbody className="divide-y divide-[#F1F5F9] text-[#334155]">
                           {tradesHistory.slice().reverse().map((t) => (
@@ -941,12 +928,12 @@ export default function App() {
 
               </div>
 
-              {/* RIGHT SIDE WIDGET CONTROL INTERFACES */}
+              {/* RIGHT SIDE WIDGET INTERFACES */}
               <div className="space-y-6">
                 
-                {/* WIN RATIO TRACKING PROFILE */}
+                {/* WIN RATE STATS PIE PROGRESS WIDGET */}
                 <div className="bg-white border border-[#E2E8F0] p-5 rounded-2xl shadow-sm space-y-4">
-                  <h3 style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-xs font-bold text-[#0F172A] uppercase flex items-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-4 h-4 text-[#047857]"><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6a7.5 7.5 0 1 0 7.5 7.5h-7.5V6Z" /><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0 0 13.5 3v7.5Z" /></svg>Win Rate Monitor</h3>
+                  <h3 style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-xs font-bold text-[#0F172A] uppercase flex items-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-4 h-4 text-[#047857]"><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6a7.5 7.5 0 1 0 7.5 7.5h-7.5V6Z" /><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0 0 13.5 3v7.5Z" /></svg>Win Loss Ratio Stats</h3>
                   {totalTradesCount > 0 ? (
                     <div className="space-y-4">
                       <div className="w-full h-6 bg-rose-100 rounded-lg overflow-hidden flex border border-rose-200">
@@ -954,30 +941,30 @@ export default function App() {
                         <div className="flex-1 flex items-center justify-center text-[10px] text-rose-800 font-black">{lossRatePercent > 12 && `${lossRatePercent}%`}</div>
                       </div>
                       <div className="grid grid-cols-2 gap-3 text-center text-xs md:text-sm font-bold pt-1">
-                        <div className="bg-[#E6F4EA] p-3 rounded-xl border border-[#A7F3D0]"><span className="block text-[9px] font-black text-[#065F46] uppercase mb-0.5">Wins</span><span className="text-base font-black text-[#047857]">{winsCount} Blocks</span></div>
-                        <div className="bg-rose-50 p-3 rounded-xl border border-rose-100"><span className="block text-[9px] font-black text-rose-700 uppercase mb-0.5">Losses</span><span className="text-base font-black text-rose-800">{lossesCount} Blocks</span></div>
+                        <div className="bg-[#E6F4EA] p-3 rounded-xl border border-[#A7F3D0]"><span className="block text-[9px] font-black text-[#065F46] uppercase mb-0.5">Wins</span><span className="text-base font-black text-[#047857]">{winsCount} Trades</span></div>
+                        <div className="bg-rose-50 p-3 rounded-xl border border-rose-100"><span className="block text-[9px] font-black text-rose-700 uppercase mb-0.5">Losses</span><span className="text-base font-black text-rose-800">{lossesCount} Trades</span></div>
                       </div>
                     </div>
                   ) : (
-                    <p className="text-xs font-bold text-[#94A3B8] text-center py-5 border border-dashed border-[#E2E8F0] rounded-xl">No analytics computed inside this matrix loop yet.</p>
+                    <p className="text-xs font-bold text-[#94A3B8] text-center py-5 border border-dashed border-[#E2E8F0] rounded-xl">No trade data recorded yet to compute stats.</p>
                   )}
                 </div>
 
-                {/* WITHDRAW CAPITAL BASE PANEL */}
+                {/* WITHDRAW CASH INTERFACE */}
                 <div className="bg-white border border-[#E2E8F0] p-5 rounded-2xl shadow-sm">
-                  <h3 style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-xs font-bold text-[#0F172A] uppercase mb-3 flex items-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-4 h-4 text-[#047857]"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-5.625 3.512A2.25 2.25 0 0 1 2.25 18V6M21.75 18.25a2.25 2.25 0 0 1-2.25 2.25H4.5M21.75 18V6c0-.98-.79-1.75-1.75-1.75H4.5" /></svg>Secure Withdrawal</h3>
+                  <h3 style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-xs font-bold text-[#0F172A] uppercase mb-3 flex items-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-4 h-4 text-[#047857]"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-5.625 3.512A2.25 2.25 0 0 1 2.25 18V6M21.75 18.25a2.25 2.25 0 0 1-2.25 2.25H4.5M21.75 18V6c0-.98-.79-1.75-1.75-1.75H4.5" /></svg>Withdraw Money</h3>
                   {activePlan.status === 'Active' ? (
                     <form onSubmit={handleWithdraw} className="space-y-3">
-                      <input type="number" step="any" value={withdrawalInput} onChange={(e) => setWithdrawalInput(e.target.value)} placeholder="Amount to settle out ($)" className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3 text-sm font-semibold text-[#0F172A]" min="0.01" max={activePlan.currentBalance} />
-                      <button type="submit" style={{ fontFamily: '"Unbounded", sans-serif' }} className="w-full py-2.5 bg-[#047857] text-white font-bold text-[10px] uppercase tracking-wider rounded-xl shadow-xs flex items-center justify-center gap-1">Execute Liquidation</button>
+                      <input type="number" step="any" value={withdrawalInput} onChange={(e) => setWithdrawalInput(e.target.value)} placeholder="Amount to withdraw ($)" className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3 text-sm font-semibold text-[#0F172A]" min="0.01" max={activePlan.currentBalance} />
+                      <button type="submit" style={{ fontFamily: '"Unbounded", sans-serif' }} className="w-full py-2.5 bg-[#047857] text-white font-bold text-[10px] uppercase tracking-wider rounded-xl shadow-xs flex items-center justify-center gap-1">Confirm Withdrawal</button>
                     </form>
                   ) : (
-                    <p className="text-xs text-[#94A3B8] text-center py-2.5 border border-dashed border-[#E2E8F0] rounded-xl font-bold">Settle processes locked.</p>
+                    <p className="text-xs text-[#94A3B8] text-center py-2.5 border border-dashed border-[#E2E8F0] rounded-xl font-bold">Withdrawals closed for frozen plan.</p>
                   )}
                   <div className="mt-4 pt-4 border-t border-[#F1F5F9]">
-                    <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider mb-2.5">Vault Extraction Records</h4>
+                    <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider mb-2.5">Withdrawal Logs</h4>
                     {withdrawals.length === 0 ? (
-                      <p className="text-xs text-[#94A3B8] font-bold">No payouts recorded yet.</p>
+                      <p className="text-xs text-[#94A3B8] font-bold">No withdrawals made yet.</p>
                     ) : (
                       <div className="space-y-2 max-h-40 overflow-y-auto">
                         {withdrawals.map((w) => (
@@ -988,16 +975,16 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* END STATE SUMMARY SUMMARY DETAILS PANEL VIEW */}
+                {/* END STATE SUMMARY PANEL DETAILS SECTION */}
                 {activePlan.status === 'Ended' && (
-                  <div className="bg-[#E6F4EA] border border-[#A7F3D0] p-5 rounded-2xl space-y-4 shadow-xs animate-fadeIn">
-                    <h3 style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-xs font-bold text-[#065F46] uppercase flex items-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-4.5 h-4.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.03 0 1.9.793 1.993 1.81A48.226 48.226 0 0 1 18 4.084m-5.8 0A48.197 48.197 0 0 0 12 4.084m0 0c-1.135.094-1.976 1.057-1.976 2.192V16.5A2.25 2.25 0 0 0 12 18.75h.375m-9.303-3.376C1.83 14.124 1.5 13.1 1.5 12c0-4.97 4.03-9 9-9a8.96 8.96 0 0 1 5.433 1.83" /></svg>Matrix Log Totals</h3>
+                  <div className="bg-[#E6F4EA] border border-[#A7F3D0] p-5 rounded-2xl space-y-4 shadow-xs">
+                    <h3 style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-xs font-bold text-[#065F46] uppercase flex items-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-4.5 h-4.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.03 0 1.9.793 1.993 1.81A48.226 48.226 0 0 1 18 4.084m-5.8 0A48.197 48.197 0 0 0 12 4.084m0 0c-1.135.094-1.976 1.057-1.976 2.192V16.5A2.25 2.25 0 0 0 12 18.75h.375m-9.303-3.376C1.83 14.124 1.5 13.1 1.5 12c0-4.97 4.03-9 9-9a8.96 8.96 0 0 1 5.433 1.83" /></svg>Final Plan Results</h3>
                     <div className="space-y-3 text-sm font-bold text-[#065F46]">
-                      <div className="flex justify-between border-b border-[#A7F3D0] pb-2"><span>Compounded Net Yield:</span><span className="font-black">{(activePlan.currentBalance / activePlan.initialBalance).toFixed(2)}x</span></div>
-                      <div className="flex justify-between border-b border-[#A7F3D0] pb-2"><span>Total Growth Scale:</span><span className="font-black text-[#047857]">{(((activePlan.currentBalance - activePlan.initialBalance) / activePlan.initialBalance) * 100).toFixed(1)}%</span></div>
-                      <div className="flex justify-between"><span>Wins / Losses Map:</span><span className="font-black">{winsCount}W - {lossesCount}L</span></div>
+                      <div className="flex justify-between border-b border-[#A7F3D0] pb-2"><span>Account Multiplier:</span><span className="font-black">{(activePlan.currentBalance / activePlan.initialBalance).toFixed(2)}x</span></div>
+                      <div className="flex justify-between border-b border-[#A7F3D0] pb-2"><span>Total Profit Scale:</span><span className="font-black text-[#047857]">{(((activePlan.currentBalance - activePlan.initialBalance) / activePlan.initialBalance) * 100).toFixed(1)}%</span></div>
+                      <div className="flex justify-between"><span>Wins & Losses Map:</span><span className="font-black">{winsCount} Wins - {lossesCount} Losses</span></div>
                     </div>
-                    <button onClick={() => setView('dashboard')} style={{ fontFamily: '"Unbounded", sans-serif' }} className="w-full py-2.5 bg-[#047857] text-white font-bold text-[10px] uppercase rounded-xl shadow-xs transition flex items-center justify-center gap-1">Return Home Screen</button>
+                    <button onClick={() => setView('dashboard')} style={{ fontFamily: '"Unbounded", sans-serif' }} className="w-full py-2.5 bg-[#047857] text-white font-bold text-[10px] uppercase rounded-xl shadow-xs transition flex items-center justify-center gap-1">Go Back Home</button>
                   </div>
                 )}
 
