@@ -324,7 +324,6 @@ export default function App() {
     
     const newEndingBalance = Math.round((currentBalance + payout) * 100) / 100;
     
-    // --- 📅 INCORPORATED YEAR INTO THE CHRONOLOGICAL DATE FORMATTER ---
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const now = new Date();
     const day = String(now.getDate()).padStart(2, '0');
@@ -358,7 +357,6 @@ export default function App() {
     setTradeNote('');
   };
 
-  // --- 🛠️ UNDO LAST TRADE HANDLER TRIGGER SYSTEM ---
   const handleUndoLastTrade = (tradeId) => {
     if (tradesHistory.length === 0) return;
     
@@ -667,7 +665,7 @@ export default function App() {
               Home Dashboard
             </button>
             <button onClick={() => setView('create')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-base transition ${view === 'create' ? 'bg-[#E6F4EA] text-[#065F46]' : 'text-[#64748B] hover:bg-[#F8FAFC]'}`}>
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+              <svg xmlns="http://www.w3.org/2000/xl" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
               Create New Plan
             </button>
           </div>
@@ -803,7 +801,7 @@ export default function App() {
                     <span className="text-[#047857] font-bold">Choose 1:1, 1:2, or 1:3 on each win</span>
                   </div>
                 </div>
-                <button type="submit" style={{ fontFamily: '"Unbounded", sans-serif' }} className="w-full py-4 bg-[#047857] text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-xs flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 0 1-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 0 0 6.16-12.12A14.98 14.98 0 0 0 9.631 8.41m5.96 5.96a14.926 14.926 0 0 1-5.841 2.58m-.119-8.54a6 6 0 0 0-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 0 0-2.58 5.84m2.6-2.7h.01M21 3a16.3 16.3 0 0 0-3.47 3.47m0 0A16.3 16.3 0 0 0 14.06 10" /></svg>Start Plan Now</button>
+                <button type="submit" style={{ fontFamily: '"Unbounded", sans-serif' }} className="w-full py-4 bg-[#047857] text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-xs flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 0 1-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 0 0 6.16-12.12A14.98 14.98 0 0 0 9.631 8.41m5.96 5.96a14.98 14.98 0 0 1-5.841 2.58m-.119-8.54a6 6 0 0 0-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 0 0-2.58 5.84m2.6-2.7h.01M21 3a16.3 16.3 0 0 0-3.47 3.47m0 0A16.3 16.3 0 0 0 14.06 10" /></svg>Start Plan Now</button>
               </form>
             </div>
           )}
@@ -812,10 +810,10 @@ export default function App() {
           {view === 'active' && activePlan && (
             <div className="flex flex-col gap-6 w-full">
               
-              {/* --- TOP ROW CONFIGURATION PANELS (Grid view splits for inputs/widgets) --- */}
+              {/* --- TOP ROW CONFIGURATION PANELS --- */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full items-start">
                 
-                {/* LEFT BLOCK INTERFACES (Takes 2/3 width block area spacing) */}
+                {/* LEFT BLOCK INTERFACES */}
                 <div className="lg:col-span-2 space-y-6">
                   <div className="bg-white border border-[#E2E8F0] p-6 rounded-2xl shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
@@ -874,9 +872,9 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* RIGHT COLUMN WIDGETS (Takes 1/3 width sidebar layout context) */}
+                {/* RIGHT COLUMN WIDGETS */}
                 <div className="space-y-6">
-                  {/* WIN RATE STATS PIE PROGRESS WIDGET */}
+                  {/* WIN RATE STATS WIDGET */}
                   <div className="bg-white border border-[#E2E8F0] p-5 rounded-2xl shadow-sm space-y-4">
                     <h3 style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-xs font-bold text-[#0F172A] uppercase flex items-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-4 h-4 text-[#047857]"><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6a7.5 7.5 0 1 0 7.5 7.5h-7.5V6Z" /><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0 0 13.5 3v7.5Z" /></svg>Win Loss Ratio Stats</h3>
                     {totalTradesCount > 0 ? (
@@ -920,7 +918,7 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* END STATE SUMMARY PANEL DETAILS SECTION */}
+                  {/* END STATE SUMMARY PANEL */}
                   {activePlan.status === 'Ended' && (
                     <div className="bg-[#E6F4EA] border border-[#A7F3D0] p-5 rounded-2xl space-y-4 shadow-xs">
                       <h3 style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-xs font-bold text-[#065F46] uppercase flex items-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-4.5 h-4.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.03 0 1.9.793 1.993 1.81A48.226 48.226 0 0 1 18 4.084m-5.8 0A48.197 48.197 0 0 0 12 4.084m0 0c-1.135.094-1.976 1.057-1.976 2.192V16.5A2.25 2.25 0 0 0 12 18.75h.375m-9.303-3.376C1.83 14.124 1.5 13.1 1.5 12c0-4.97 4.03-9 9-9a8.96 8.96 0 0 1 5.433 1.83" /></svg>Final Plan Results</h3>
@@ -936,7 +934,7 @@ export default function App() {
 
               </div>
 
-              {/* --- 📈 FULL WIDTH: ACCOUNT GROWTH PROGRESS CHART --- */}
+              {/* --- 📈 ACCOUNT GROWTH PROGRESS CHART --- */}
               <div className="bg-white border border-[#E2E8F0] p-5 rounded-2xl shadow-sm w-full">
                 <div className="flex justify-between items-center mb-4">
                   <h3 style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-xs font-bold text-[#0F172A] uppercase flex items-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-4 h-4 text-[#047857]"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 0 5.814-5.518l2.74-8.74m0 0-5.94 1.15m5.94-1.15-1.15 5.94M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>Account Growth Progress Chart</h3>
@@ -948,12 +946,10 @@ export default function App() {
                       <linearGradient id="curveGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10B981" stopOpacity="0.2"/><stop offset="100%" stopColor="#10B981" stopOpacity="0.0"/></linearGradient>
                     </defs>
                     
-                    {/* Left Side Y Axis Scale Percentages */}
                     <text x="45" y="34" textAnchor="end" fill="#94A3B8" className="text-[9px] font-bold font-mono">{maxGrowth.toFixed(1)}%</text>
                     <text x="45" y="84" textAnchor="end" fill="#94A3B8" className="text-[9px] font-bold font-mono">{((maxGrowth + minGrowth)/2).toFixed(1)}%</text>
                     <text x="45" y="134" textAnchor="end" fill="#94A3B8" className="text-[9px] font-bold font-mono">{minGrowth.toFixed(1)}%</text>
 
-                    {/* Chart Grid Lines */}
                     <line x1="52" y1="30" x2="965" y2="30" stroke="#E2E8F0" strokeWidth="0.6" strokeDasharray="3"/>
                     <line x1="52" y1="80" x2="965" y2="80" stroke="#E2E8F0" strokeWidth="0.6" strokeDasharray="3"/>
                     <line x1="52" y1="130" x2="965" y2="130" stroke="#CBD5E1" strokeWidth="1"/>
@@ -963,7 +959,6 @@ export default function App() {
                         <path d={`M 55,130 L ${chartPoints} L ${chartPoints.split(' ').pop().split(',')[0]},130 Z`} fill="url(#curveGrad)"/>
                         <polyline fill="none" stroke="#047857" strokeWidth="3" points={chartPoints} strokeLinecap="round" strokeLinejoin="round"/>
                         
-                        {/* Chronological X Axis Dates */}
                         {growthHistory.map((g, idx) => {
                           const xCoord = (idx / (growthHistory.length - 1)) * 890 + 55;
                           const yCoord = 130 - ((g - minGrowth) / growthRange) * 100;
@@ -982,7 +977,7 @@ export default function App() {
                 </div>
               </div>
 
-              {/* --- 📊 FULL WIDTH: ALL TRADE HISTORY LOGS --- */}
+              {/* --- 📊 ALL TRADE HISTORY LOGS --- */}
               <div className="bg-white border border-[#E2E8F0] rounded-2xl shadow-xs overflow-hidden w-full">
                 <div className="p-4 border-b border-[#F1F5F9] bg-white flex items-center gap-2">
                   <div className="text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0z" /></svg></div>
@@ -1006,7 +1001,7 @@ export default function App() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#F1F5F9] text-[#334155]">
-                        {tradesHistory.slice().map((t, idx) => (
+                        {tradesHistory.map((t, idx) => (
                           <tr key={t.id} className={`transition ${t.status === 'Win' ? 'bg-[#E6F4EA]/15' : 'bg-rose-50/15'}`}>
                             <td className="p-4 text-[#94A3B8] font-bold">#{t.tradeNum}</td>
                             <td className="p-4 text-xs font-mono text-slate-500">{t.date}</td>
@@ -1018,14 +1013,14 @@ export default function App() {
                             </td>
                             <td className="p-4 font-bold text-[#0F172A]">${t.endingBalance.toFixed(2)}</td>
                             <td className="p-4 text-center">
-                              {/* --- INTERACTIVE ACTION COLUMN FEATURING DYNAMIC UNDO BUTTONS ENGINE --- */}
-                              {idx === 0 && activePlan.status === 'Active' ? (
+                              {/* --- INTERACTIVE ACTION COLUMN ADJUSTED FOR CHRONOLOGICAL BASE --- */}
+                              {idx === tradesHistory.length - 1 && activePlan.status === 'Active' ? (
                                 <button 
                                   onClick={() => handleUndoLastTrade(t.id)} 
                                   title="Undo Last Trade"
                                   className="px-2.5 py-1 text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-lg transition transform hover:scale-105 active:scale-95 flex items-center gap-1 mx-auto"
                                 >
-                                  <span></span> Undo
+                                  Undo
                                 </button>
                               ) : (
                                 <span className="text-xs text-slate-300 select-none italic font-normal">Locked</span>
