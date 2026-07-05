@@ -907,7 +907,7 @@ export default function App() {
                             <th className="p-4">Start Balance</th>
                             <th className="p-4">Risked</th>
                             <th className="p-4">Ratio Result</th>
-                            <th className="p-4">Payout Amount</th>
+                            <th className="p-4">Total Profit/Loss</th>
                             <th className="p-4">End Balance</th>
                           </tr>
                         </thead>
@@ -920,7 +920,7 @@ export default function App() {
                               <td className="p-4 font-medium text-slate-600">${t.startingBalance.toFixed(2)}</td>
                               <td className="p-4 text-rose-700/80">${t.riskAmount.toFixed(2)}</td>
                               <td className="p-4"><span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${t.status === 'Win' ? 'bg-[#E6F4EA] text-[#065F46]' : 'bg-rose-100 text-rose-700'}`}>{t.status === 'Win' ? `WIN (1:${t.rewardRatio})` : 'LOSS'}</span></td>
-                              <td className={`p-4 font-bold ${t.payout > 0 ? 'text-[#047857]' : 'text-rose-700'}`}>{t.payout > 0 ? `+$${t.payout.toFixed(2)}` : `-$${Math.abs(t.payout).toFixed(2)}`}</td>
+                              <td className={`p-4 font-bold ${t.totalProfitLoss > 0 ? 'text-[#047857]' : 'text-rose-700'}`}>{t.totalProfitLoss > 0 ? `+$${t.totalProfitLoss.toFixed(2)}` : `-$${Math.abs(t.totalProfitLoss).toFixed(2)}`}</td>
                               <td className="p-4 font-bold text-[#0F172A]">${t.endingBalance.toFixed(2)}</td>
                             </tr>
                           ))}
