@@ -968,15 +968,15 @@ export default function App() {
                         <tr className="bg-[#F8FAFC] text-[#64748B] border-b border-[#F1F5F9] font-bold uppercase tracking-wider text-xs">
                           <th className="p-4">Trade #</th>
                           <th className="p-4">Date</th>
-                          <th className="p-4">Start Balance</th>
-                          <th className="p-4">Risked</th>
-                          <th className="p-4">Ratio Result</th>
+                          <th className="p-4">Starting Balance</th>
+                          <th className="p-4">Risk Amount</th>
+                          <th className="p-4">Ratio</th>
                           <th className="p-4">Total Profit/Loss</th>
-                          <th className="p-4">End Balance</th>
+                          <th className="p-4">Ending Balance</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#F1F5F9] text-[#334155]">
-                        {tradesHistory.slice().reverse().map((t) => (
+                        {tradesHistory.slice().map((t) => (
                           <tr key={t.id} className={`transition ${t.status === 'Win' ? 'bg-[#E6F4EA]/15' : 'bg-rose-50/15'}`}>
                             <td className="p-4 text-[#94A3B8] font-bold">#{t.tradeNum}</td>
                             <td className="p-4 text-xs font-mono text-slate-500">{t.date}</td>
