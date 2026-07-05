@@ -425,7 +425,6 @@ export default function App() {
   const minGrowth = Math.min(...growthHistory, -20);
   const growthRange = maxGrowth - minGrowth > 0 ? maxGrowth - minGrowth : 1;
 
-  // Render expanded width coordinates engine matching widescreen metrics
   const chartPoints = growthHistory.map((g, i) => {
     const x = (i / Math.max(growthHistory.length - 1, 1)) * 890 + 55; 
     const y = 130 - ((g - minGrowth) / growthRange) * 100; 
@@ -683,7 +682,7 @@ export default function App() {
                 <div className="bg-[#047857] text-white p-6 rounded-2xl shadow-xs flex flex-col justify-between min-h-[120px]">
                   <div className="flex justify-between items-start">
                     <span className="text-xs text-[#A7F3D0] block font-bold uppercase tracking-wider">Total Plans</span>
-                    <div className="text-[#A7F3D0]"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.03 0 1.9.793 1.993 1.81A48.226 48.226 0 0 1 18 4.084m-5.8 0A48.197 48.197 0 0 0 12 4.084m0 0c-1.135.094-1.976 1.057-1.976 2.192V16.5A2.25 2.25 0 0 0 12 18.75h.375m-9.303-3.376C1.83 14.124 1.5 13.1 1.5 12c0-4.97 4.03-9 9-9a8.96 8.96 0 0 1 5.433 1.83" /></svg></div>
+                    <div className="text-[#A7F3D0]"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.03 0 1.9.793 1.993 1.81A48.226 48.226 0 0 1 18 4.084m-5.8 0A48.197 48.197 0 0 0 12 4.084m0 0c-1.135.094-1.976 1.057-1.976 2.192V16.5A2.25 2.25 0 0 0 12 18.75h.375m-9.303-3.376C1.83 14.124 1.5 13.1 1.5 12c0-4.97 4.03;9 9-9a8.96 8.96 0 0 1 5.433 1.83" /></svg></div>
                   </div>
                   <span style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-3xl font-bold tracking-tight mt-2">{currentTraderPlans.length}</span>
                 </div>
@@ -984,7 +983,10 @@ export default function App() {
                             <td className="p-4 font-medium text-slate-600">${t.startingBalance.toFixed(2)}</td>
                             <td className="p-4 text-rose-700/80">${t.riskAmount.toFixed(2)}</td>
                             <td className="p-4"><span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${t.status === 'Win' ? 'bg-[#E6F4EA] text-[#065F46]' : 'bg-rose-100 text-rose-700'}`}>{t.status === 'Win' ? `WIN (1:${t.rewardRatio})` : 'LOSS'}</span></td>
-                            <td className={`p-4 font-bold ${t.totalProfitLoss > 0 ? 'text-[#047857]' : 'text-rose-700'}`}>{t.totalProfitLoss > 0 ? `+$${t.totalProfitLoss.toFixed(2)}` : `-$${Math.abs(t.totalProfitLoss).toFixed(2)}`}</td>
+                            {/* --- CORRECTED REFERENCE PROPERTY LINK HERE --- */}
+                            <td className={`p-4 font-bold ${t.payout > 0 ? 'text-[#047857]' : 'text-rose-700'}`}>
+                              {t.payout > 0 ? `+$${t.payout.toFixed(2)}` : `-$${Math.abs(t.payout).toFixed(2)}`}
+                            </td>
                             <td className="p-4 font-bold text-[#0F172A]">${t.endingBalance.toFixed(2)}</td>
                           </tr>
                         ))}
