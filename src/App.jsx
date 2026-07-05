@@ -324,7 +324,6 @@ export default function App() {
     
     const newEndingBalance = Math.round((currentBalance + payout) * 100) / 100;
     
-    // --- 📅 FIXED DATE FORMATTING ENGINE (Outputs like: Oct 03) ---
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const now = new Date();
     const day = String(now.getDate()).padStart(2, '0');
@@ -426,8 +425,9 @@ export default function App() {
   const minGrowth = Math.min(...growthHistory, -20);
   const growthRange = maxGrowth - minGrowth > 0 ? maxGrowth - minGrowth : 1;
 
+  // Render expanded width coordinates engine matching widescreen metrics
   const chartPoints = growthHistory.map((g, i) => {
-    const x = (i / Math.max(growthHistory.length - 1, 1)) * 440 + 45; 
+    const x = (i / Math.max(growthHistory.length - 1, 1)) * 890 + 55; 
     const y = 130 - ((g - minGrowth) / growthRange) * 100; 
     return `${x},${y}`;
   }).join(' ');
@@ -780,219 +780,220 @@ export default function App() {
             </div>
           )}
 
-          {/* --- VIEW: ACTIVE SYSTEM TRACKER --- */}
+          {/* ---------------- 💡 VIEW 3: ACTIVE SYSTEM MONITOR ---------------- */}
           {view === 'active' && activePlan && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="flex flex-col gap-6 w-full">
               
-              <div className="lg:col-span-2 space-y-6">
+              {/* --- TOP ROW CONFIGURATION PANELS (Grid view splits for inputs/widgets) --- */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full items-start">
                 
-                <div className="bg-white border border-[#E2E8F0] p-6 rounded-2xl shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                  <div>
-                    <h2 style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-base font-bold text-[#0F172A]">{activePlan.name}</h2>
-                    <p className="text-xs text-[#64748B] mt-1 font-bold">Trade Risk Setup: <b className="text-slate-700">{activePlan.riskPercent}%</b> | Rewards: <b className="text-slate-700">Dynamic Multiples</b></p>
-                  </div>
-                  <div className="flex gap-2.5 w-full sm:w-auto">
-                    <button 
-                      onClick={handleExportSessionCSV}
-                      style={{ fontFamily: '"Unbounded", sans-serif' }}
-                      className="flex-1 sm:flex-none px-4 py-2 text-xs font-bold border-2 border-[#10B981] bg-[#E6F4EA] text-[#065F46] rounded-xl hover:bg-[#D1FAE5] transition flex items-center justify-center gap-1.5 shadow-2xs"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>Export CSV
-                    </button>
-                    {activePlan.status === 'Active' && <button onClick={handleEndCompound} className="px-4 py-2 text-xs font-bold border border-[#FCA5A5] bg-white text-[#EF4444] rounded-xl hover:bg-rose-50/50 transition flex items-center justify-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>Freeze Plan</button>}
-                    <button onClick={() => handleDeleteSession(activePlan.id)} className="px-4 py-2 text-xs font-bold bg-rose-600 text-white rounded-xl flex items-center justify-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.34 9m-4.72 0-.34-9m9.49-5.4-.78 11.44a2.25 2.25 0 0 1-2.243 2.11H8.084a2.25 2.25 0 0 1-2.244-2.11L5.06 4.39M9.25 4.392V3.75M14.25 4.392V3.75M19.5 4.392V3.75M4.75 4.392h14.5M4.75 4.392v16.108A1.25 1.25 0 0 0 6 21.75h12A1.25 1.25 0 0 0 19.25 20.5V4.392" /></svg>Delete</button>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3 md:gap-4">
-                  <div className="bg-white border border-[#E2E8F0] p-4 rounded-2xl text-center shadow-xs">
-                    <span className="text-[10px] md:text-xs text-[#64748B] font-bold uppercase block mb-1">Starting Money</span>
-                    <span style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-sm md:text-base font-bold text-[#0F172A]">${activePlan.initialBalance.toFixed(2)}</span>
-                  </div>
-                  <div className="bg-white border border-[#E2E8F0] p-4 rounded-2xl text-center shadow-xs border-b-4 border-b-[#10B981]">
-                    <span className="text-[10px] md:text-xs text-[#64748B] font-bold uppercase block mb-1">Current Money</span>
-                    <span style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-sm md:text-base font-black text-[#047857]">${activePlan.currentBalance.toFixed(2)}</span>
-                  </div>
-                  <div className="bg-white border border-[#E2E8F0] p-4 rounded-2xl text-center shadow-xs">
-                    <span className="text-[10px] md:text-xs text-[#64748B] font-bold uppercase block mb-1">Total Trades</span>
-                    <span style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-sm md:text-base font-bold text-[#1E293B]">{tradesHistory.length}</span>
-                  </div>
-                </div>
-
-                {/* LOG NEW TRADE ACTION BOX */}
-                <div className="bg-white border-2 border-[#10B981]/40 p-5 md:p-6 rounded-2xl shadow-xs bg-gradient-to-br from-white to-[#F8FAFC]">
-                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4">
-                    <span style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-[10px] font-black uppercase text-[#047857] bg-[#E6F4EA] px-3 py-1.5 rounded-lg w-fit flex items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 9.75h8.25L9.75 21.75 12 14.25H3.75z" /></svg>Log Next Trade: Trade #{tradesHistory.length + 1}</span>
-                    <span className="text-xs text-[#64748B] font-bold">Money At Risk: <b className="text-rose-700">${nextRiskAmt.toFixed(2)}</b></span>
-                  </div>
-
-                  {activePlan.status === 'Active' ? (
-                    <div className="space-y-5">
-                      <div className="relative">
-                        <input type="text" value={tradeNote} onChange={(e) => setTradeNote(e.target.value)} placeholder="Type a short note for this trade (optional)..." className="w-full bg-white border border-[#E2E8F0] text-sm rounded-xl pl-10 pr-4 py-3.5 focus:outline-none focus:border-[#10B981] text-[#334155] font-semibold" />
-                        <div className="absolute left-3.5 top-4 text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" /></svg></div>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <button onClick={() => handleExecuteCurrentTrade('Win')} style={{ fontFamily: '"Unbounded", sans-serif' }} className="py-4 bg-[#047857] text-white font-bold text-xs uppercase rounded-xl shadow-xs transition flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>I Won This Trade</button>
-                        <button onClick={() => handleExecuteCurrentTrade('Loss')} style={{ fontFamily: '"Unbounded", sans-serif' }} className="py-4 bg-[#1E293B] text-white font-bold text-xs uppercase rounded-xl transition flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>I Lost This Trade (-{activePlan.riskPercent}%)</button>
-                      </div>
+                {/* LEFT BLOCK INTERFACES (Takes 2/3 width block area spacing) */}
+                <div className="lg:col-span-2 space-y-6">
+                  <div className="bg-white border border-[#E2E8F0] p-6 rounded-2xl shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                      <h2 style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-base font-bold text-[#0F172A]">{activePlan.name}</h2>
+                      <p className="text-xs text-[#64748B] mt-1 font-bold">Trade Risk Setup: <b className="text-slate-700">{activePlan.riskPercent}%</b> | Rewards: <b className="text-slate-700">Dynamic Multiples</b></p>
                     </div>
-                  ) : (
-                    <div className="p-5 bg-[#F8FAFC] rounded-xl border border-dashed border-[#E2E8F0] text-center text-sm font-bold text-[#94A3B8] flex items-center justify-center gap-2">This trading plan is frozen and closed.</div>
-                  )}
-                </div>
-
-                {/* GRAPH PERFORMANCE CHART ELEMENT */}
-                <div className="bg-white border border-[#E2E8F0] p-5 rounded-2xl shadow-sm">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-xs font-bold text-[#0F172A] uppercase flex items-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-4 h-4 text-[#047857]"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 0 5.814-5.518l2.74-8.74m0 0-5.94 1.15m5.94-1.15-1.15 5.94M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>Account Growth Progress Chart</h3>
-                    <span className="text-[10px] text-gray-400 font-mono">Percentage Scale Curve</span>
-                  </div>
-                  <div className="w-full bg-[#F8FAFC] rounded-xl p-4 border border-[#E2E8F0]">
-                    <svg viewBox="0 0 500 160" className="w-full overflow-visible">
-                      <defs>
-                        <linearGradient id="curveGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10B981" stopOpacity="0.2"/><stop offset="100%" stopColor="#10B981" stopOpacity="0.0"/></linearGradient>
-                      </defs>
-                      
-                      {/* Left Side Y Axis Scale Percentages */}
-                      <text x="35" y="34" textAnchor="end" fill="#94A3B8" className="text-[9px] font-bold font-mono">{maxGrowth.toFixed(1)}%</text>
-                      <text x="35" y="84" textAnchor="end" fill="#94A3B8" className="text-[9px] font-bold font-mono">{((maxGrowth + minGrowth)/2).toFixed(1)}%</text>
-                      <text x="35" y="134" textAnchor="end" fill="#94A3B8" className="text-[9px] font-bold font-mono">{minGrowth.toFixed(1)}%</text>
-
-                      {/* Chart Grid Lines */}
-                      <line x1="42" y1="30" x2="485" y2="30" stroke="#E2E8F0" strokeWidth="0.6" strokeDasharray="3"/>
-                      <line x1="42" y1="80" x2="485" y2="80" stroke="#E2E8F0" strokeWidth="0.6" strokeDasharray="3"/>
-                      <line x1="42" y1="130" x2="485" y2="130" stroke="#CBD5E1" strokeWidth="1"/>
-
-                      {growthHistory.length > 1 ? (
-                        <>
-                          <path d={`M 45,130 L ${chartPoints} L ${chartPoints.split(' ').pop().split(',')[0]},130 Z`} fill="url(#curveGrad)"/>
-                          <polyline fill="none" stroke="#047857" strokeWidth="3" points={chartPoints} strokeLinecap="round" strokeLinejoin="round"/>
-                          
-                          {/* Chronological X Axis Dates */}
-                          {growthHistory.map((g, idx) => {
-                            const xCoord = (idx / (growthHistory.length - 1)) * 440 + 45;
-                            const yCoord = 130 - ((g - minGrowth) / growthRange) * 100;
-                            return (
-                              <g key={idx}>
-                                <circle cx={xCoord} cy={yCoord} r="4" fill="#10B981" stroke="white" strokeWidth="1.5"/>
-                                <text x={xCoord} y="148" textAnchor="middle" fill="#64748B" className="text-[9px] font-bold tracking-tight">{dateLabels[idx]}</text>
-                              </g>
-                            );
-                          })}
-                        </>
-                      ) : (
-                        <text x="250" y="80" textAnchor="middle" fill="#94A3B8" className="text-xs font-bold">Log trades to see your progress graph line...</text>
-                      )}
-                    </svg>
-                  </div>
-                </div>
-
-                {/* HISTORIC LOG TABLE LIST */}
-                <div className="bg-white border border-[#E2E8F0] rounded-2xl shadow-xs overflow-hidden">
-                  <div className="p-4 border-b border-[#F1F5F9] bg-white flex items-center gap-2">
-                    <div className="text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0z" /></svg></div>
-                    <h3 style={{ fontFamily: '"Unbounded", sans-serif' }} className="font-bold text-xs text-[#64748B] uppercase">All Trade History Logs</h3>
-                  </div>
-                  {tradesHistory.length === 0 ? (
-                    <div className="p-10 text-center text-[#94A3B8] text-sm font-semibold">No trades saved yet. Click the buttons above to save your wins or losses.</div>
-                  ) : (
-                    <div className="overflow-x-auto w-full">
-                      <table className="w-full text-left border-collapse min-w-[750px] text-sm md:text-base font-semibold">
-                        <thead>
-                          <tr className="bg-[#F8FAFC] text-[#64748B] border-b border-[#F1F5F9] font-bold uppercase tracking-wider text-xs">
-                            <th className="p-4">Trade #</th>
-                            <th className="p-4">Date</th>
-                            {/* --- ADDED STARTING BALANCE COLUMN HEADER --- */}
-                            <th className="p-4">Start Balance</th>
-                            <th className="p-4">Risked</th>
-                            <th className="p-4">Ratio Result</th>
-                            <th className="p-4">Total Profit/Loss</th>
-                            <th className="p-4">End Balance</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-[#F1F5F9] text-[#334155]">
-                          {tradesHistory.slice().reverse().map((t) => (
-                            <tr key={t.id} className={`transition ${t.status === 'Win' ? 'bg-[#E6F4EA]/15' : 'bg-rose-50/15'}`}>
-                              <td className="p-4 text-[#94A3B8] font-bold">#{t.tradeNum}</td>
-                              <td className="p-4 text-xs font-mono text-slate-500">{t.date}</td>
-                              {/* --- ADDED STARTING BALANCE COLUMN VALUE --- */}
-                              <td className="p-4 font-medium text-slate-600">${t.startingBalance.toFixed(2)}</td>
-                              <td className="p-4 text-rose-700/80">${t.riskAmount.toFixed(2)}</td>
-                              <td className="p-4"><span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${t.status === 'Win' ? 'bg-[#E6F4EA] text-[#065F46]' : 'bg-rose-100 text-rose-700'}`}>{t.status === 'Win' ? `WIN (1:${t.rewardRatio})` : 'LOSS'}</span></td>
-                              <td className={`p-4 font-bold ${t.totalProfitLoss > 0 ? 'text-[#047857]' : 'text-rose-700'}`}>{t.totalProfitLoss > 0 ? `+$${t.totalProfitLoss.toFixed(2)}` : `-$${Math.abs(t.totalProfitLoss).toFixed(2)}`}</td>
-                              <td className="p-4 font-bold text-[#0F172A]">${t.endingBalance.toFixed(2)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                    <div className="flex gap-2.5 w-full sm:w-auto">
+                      <button 
+                        onClick={handleExportSessionCSV}
+                        style={{ fontFamily: '"Unbounded", sans-serif' }}
+                        className="flex-1 sm:flex-none px-4 py-2 text-xs font-bold border-2 border-[#10B981] bg-[#E6F4EA] text-[#065F46] rounded-xl hover:bg-[#D1FAE5] transition flex items-center justify-center gap-1.5 shadow-2xs"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>Export CSV
+                      </button>
+                      {activePlan.status === 'Active' && <button onClick={handleEndCompound} className="px-4 py-2 text-xs font-bold border border-[#FCA5A5] bg-white text-[#EF4444] rounded-xl hover:bg-rose-50/50 transition flex items-center justify-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>Freeze Plan</button>}
+                      <button onClick={() => handleDeleteSession(activePlan.id)} className="px-4 py-2 text-xs font-bold bg-rose-600 text-white rounded-xl flex items-center justify-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.34 9m-4.72 0-.34-9m9.49-5.4-.78 11.44a2.25 2.25 0 0 1-2.243 2.11H8.084a2.25 2.25 0 0 1-2.244-2.11L5.06 4.39M9.25 4.392V3.75M14.25 4.392V3.75M19.5 4.392V3.75M4.75 4.392h14.5M4.75 4.392v16.108A1.25 1.25 0 0 0 6 21.75h12A1.25 1.25 0 0 0 19.25 20.5V4.392" /></svg>Delete</button>
                     </div>
-                  )}
-                </div>
+                  </div>
 
-              </div>
-
-              {/* RIGHT SIDE WIDGET INTERFACES */}
-              <div className="space-y-6">
-                
-                {/* WIN RATE STATS PIE PROGRESS WIDGET */}
-                <div className="bg-white border border-[#E2E8F0] p-5 rounded-2xl shadow-sm space-y-4">
-                  <h3 style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-xs font-bold text-[#0F172A] uppercase flex items-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-4 h-4 text-[#047857]"><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6a7.5 7.5 0 1 0 7.5 7.5h-7.5V6Z" /><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0 0 13.5 3v7.5Z" /></svg>Win Loss Ratio Stats</h3>
-                  {totalTradesCount > 0 ? (
-                    <div className="space-y-4">
-                      <div className="w-full h-6 bg-rose-100 rounded-lg overflow-hidden flex border border-rose-200">
-                        <div style={{ width: `${winRatePercent}%` }} className="bg-gradient-to-r from-[#047857] to-[#10B981] h-full flex items-center justify-center text-[10px] text-white font-black">{winRatePercent > 12 && `${winRatePercent}%`}</div>
-                        <div className="flex-1 flex items-center justify-center text-[10px] text-rose-800 font-black">{lossRatePercent > 12 && `${lossRatePercent}%`}</div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3 text-center text-xs md:text-sm font-bold pt-1">
-                        <div className="bg-[#E6F4EA] p-3 rounded-xl border border-[#A7F3D0]"><span className="block text-[9px] font-black text-[#065F46] uppercase mb-0.5">Wins</span><span className="text-base font-black text-[#047857]">{winsCount} Trades</span></div>
-                        <div className="bg-rose-50 p-3 rounded-xl border border-rose-100"><span className="block text-[9px] font-black text-rose-700 uppercase mb-0.5">Losses</span><span className="text-base font-black text-rose-800">{lossesCount} Trades</span></div>
-                      </div>
+                  <div className="grid grid-cols-3 gap-3 md:gap-4">
+                    <div className="bg-white border border-[#E2E8F0] p-4 rounded-2xl text-center shadow-xs">
+                      <span className="text-[10px] md:text-xs text-[#64748B] font-bold uppercase block mb-1">Starting Money</span>
+                      <span style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-sm md:text-base font-bold text-[#0F172A]">${activePlan.initialBalance.toFixed(2)}</span>
                     </div>
-                  ) : (
-                    <p className="text-xs font-bold text-[#94A3B8] text-center py-5 border border-dashed border-[#E2E8F0] rounded-xl">No trade data recorded yet to compute stats.</p>
-                  )}
-                </div>
+                    <div className="bg-white border border-[#E2E8F0] p-4 rounded-2xl text-center shadow-xs border-b-4 border-b-[#10B981]">
+                      <span className="text-[10px] md:text-xs text-[#64748B] font-bold uppercase block mb-1">Current Money</span>
+                      <span style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-sm md:text-base font-black text-[#047857]">${activePlan.currentBalance.toFixed(2)}</span>
+                    </div>
+                    <div className="bg-white border border-[#E2E8F0] p-4 rounded-2xl text-center shadow-xs">
+                      <span className="text-[10px] md:text-xs text-[#64748B] font-bold uppercase block mb-1">Total Trades</span>
+                      <span style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-sm md:text-base font-bold text-[#1E293B]">{tradesHistory.length}</span>
+                    </div>
+                  </div>
 
-                {/* WITHDRAW CASH INTERFACE */}
-                <div className="bg-white border border-[#E2E8F0] p-5 rounded-2xl shadow-sm">
-                  <h3 style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-xs font-bold text-[#0F172A] uppercase mb-3 flex items-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-4 h-4 text-[#047857]"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-5.625 3.512A2.25 2.25 0 0 1 2.25 18V6M21.75 18.25a2.25 2.25 0 0 1-2.25 2.25H4.5M21.75 18V6c0-.98-.79-1.75-1.75-1.75H4.5" /></svg>Withdraw Money</h3>
-                  {activePlan.status === 'Active' ? (
-                    <form onSubmit={handleWithdraw} className="space-y-3">
-                      <input type="number" step="any" value={withdrawalInput} onChange={(e) => setWithdrawalInput(e.target.value)} placeholder="Amount to withdraw ($)" className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3 text-sm font-semibold text-[#0F172A]" min="0.01" max={activePlan.currentBalance} />
-                      <button type="submit" style={{ fontFamily: '"Unbounded", sans-serif' }} className="w-full py-2.5 bg-[#047857] text-white font-bold text-[10px] uppercase tracking-wider rounded-xl shadow-xs flex items-center justify-center gap-1">Confirm Withdrawal</button>
-                    </form>
-                  ) : (
-                    <p className="text-xs text-[#94A3B8] text-center py-2.5 border border-dashed border-[#E2E8F0] rounded-xl font-bold">Withdrawals closed for frozen plan.</p>
-                  )}
-                  <div className="mt-4 pt-4 border-t border-[#F1F5F9]">
-                    <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider mb-2.5">Withdrawal Logs</h4>
-                    {withdrawals.length === 0 ? (
-                      <p className="text-xs text-[#94A3B8] font-bold">No withdrawals made yet.</p>
+                  {/* LOG NEW TRADE ACTION BOX */}
+                  <div className="bg-white border-2 border-[#10B981]/40 p-5 md:p-6 rounded-2xl shadow-xs bg-gradient-to-br from-white to-[#F8FAFC]">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4">
+                      <span style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-[10px] font-black uppercase text-[#047857] bg-[#E6F4EA] px-3 py-1.5 rounded-lg w-fit flex items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 9.75h8.25L9.75 21.75 12 14.25H3.75z" /></svg>Log Next Trade: Trade #{tradesHistory.length + 1}</span>
+                      <span className="text-xs text-[#64748B] font-bold">Money At Risk: <b className="text-rose-700">${nextRiskAmt.toFixed(2)}</b></span>
+                    </div>
+
+                    {activePlan.status === 'Active' ? (
+                      <div className="space-y-5">
+                        <div className="relative">
+                          <input type="text" value={tradeNote} onChange={(e) => setTradeNote(e.target.value)} placeholder="Type a short note for this trade (optional)..." className="w-full bg-white border border-[#E2E8F0] text-sm rounded-xl pl-10 pr-4 py-3.5 focus:outline-none focus:border-[#10B981] text-[#334155] font-semibold" />
+                          <div className="absolute left-3.5 top-4 text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" /></svg></div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <button onClick={() => handleExecuteCurrentTrade('Win')} style={{ fontFamily: '"Unbounded", sans-serif' }} className="py-4 bg-[#047857] text-white font-bold text-xs uppercase rounded-xl shadow-xs transition flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>I Won This Trade</button>
+                          <button onClick={() => handleExecuteCurrentTrade('Loss')} style={{ fontFamily: '"Unbounded", sans-serif' }} className="py-4 bg-[#1E293B] text-white font-bold text-xs uppercase rounded-xl transition flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>I Lost This Trade (-{activePlan.riskPercent}%)</button>
+                        </div>
+                      </div>
                     ) : (
-                      <div className="space-y-2 max-h-40 overflow-y-auto">
-                        {withdrawals.map((w) => (
-                          <div key={w.id} className="bg-[#F8FAFC] p-3 rounded-xl border border-[#E2E8F0] text-xs font-bold flex justify-between items-center"><span className="text-[#B45309]">-${w.amount.toFixed(2)}</span><span className="text-[10px] text-[#94A3B8] font-mono">{w.timestamp}</span></div>
-                        ))}
-                      </div>
+                      <div className="p-5 bg-[#F8FAFC] rounded-xl border border-dashed border-[#E2E8F0] text-center text-sm font-bold text-[#94A3B8] flex items-center justify-center gap-2">This trading plan is frozen and closed.</div>
                     )}
                   </div>
                 </div>
 
-                {/* END STATE SUMMARY PANEL DETAILS SECTION */}
-                {activePlan.status === 'Ended' && (
-                  <div className="bg-[#E6F4EA] border border-[#A7F3D0] p-5 rounded-2xl space-y-4 shadow-xs">
-                    <h3 style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-xs font-bold text-[#065F46] uppercase flex items-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-4.5 h-4.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.03 0 1.9.793 1.993 1.81A48.226 48.226 0 0 1 18 4.084m-5.8 0A48.197 48.197 0 0 0 12 4.084m0 0c-1.135.094-1.976 1.057-1.976 2.192V16.5A2.25 2.25 0 0 0 12 18.75h.375m-9.303-3.376C1.83 14.124 1.5 13.1 1.5 12c0-4.97 4.03-9 9-9a8.96 8.96 0 0 1 5.433 1.83" /></svg>Final Plan Results</h3>
-                    <div className="space-y-3 text-sm font-bold text-[#065F46]">
-                      <div className="flex justify-between border-b border-[#A7F3D0] pb-2"><span>Account Multiplier:</span><span className="font-black">{(activePlan.currentBalance / activePlan.initialBalance).toFixed(2)}x</span></div>
-                      <div className="flex justify-between border-b border-[#A7F3D0] pb-2"><span>Total Profit Scale:</span><span className="font-black text-[#047857]">{(((activePlan.currentBalance - activePlan.initialBalance) / activePlan.initialBalance) * 100).toFixed(1)}%</span></div>
-                      <div className="flex justify-between"><span>Wins & Losses Map:</span><span className="font-black">{winsCount} Wins - {lossesCount} Losses</span></div>
-                    </div>
-                    <button onClick={() => setView('dashboard')} style={{ fontFamily: '"Unbounded", sans-serif' }} className="w-full py-2.5 bg-[#047857] text-white font-bold text-[10px] uppercase rounded-xl shadow-xs transition flex items-center justify-center gap-1">Go Back Home</button>
+                {/* RIGHT COLUMN WIDGETS (Takes 1/3 width sidebar layout context) */}
+                <div className="space-y-6">
+                  {/* WIN RATE STATS PIE PROGRESS WIDGET */}
+                  <div className="bg-white border border-[#E2E8F0] p-5 rounded-2xl shadow-sm space-y-4">
+                    <h3 style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-xs font-bold text-[#0F172A] uppercase flex items-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-4 h-4 text-[#047857]"><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6a7.5 7.5 0 1 0 7.5 7.5h-7.5V6Z" /><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0 0 13.5 3v7.5Z" /></svg>Win Loss Ratio Stats</h3>
+                    {totalTradesCount > 0 ? (
+                      <div className="space-y-4">
+                        <div className="w-full h-6 bg-rose-100 rounded-lg overflow-hidden flex border border-rose-200">
+                          <div style={{ width: `${winRatePercent}%` }} className="bg-gradient-to-r from-[#047857] to-[#10B981] h-full flex items-center justify-center text-[10px] text-white font-black">{winRatePercent > 12 && `${winRatePercent}%`}</div>
+                          <div className="flex-1 flex items-center justify-center text-[10px] text-rose-800 font-black">{lossRatePercent > 12 && `${lossRatePercent}%`}</div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 text-center text-xs md:text-sm font-bold pt-1">
+                          <div className="bg-[#E6F4EA] p-3 rounded-xl border border-[#A7F3D0]"><span className="block text-[9px] font-black text-[#065F46] uppercase mb-0.5">Wins</span><span className="text-base font-black text-[#047857]">{winsCount} Trades</span></div>
+                          <div className="bg-rose-50 p-3 rounded-xl border border-rose-100"><span className="block text-[9px] font-black text-rose-700 uppercase mb-0.5">Losses</span><span className="text-base font-black text-rose-800">{lossesCount} Trades</span></div>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs font-bold text-[#94A3B8] text-center py-5 border border-dashed border-[#E2E8F0] rounded-xl">No trade data recorded yet to compute stats.</p>
+                    )}
                   </div>
-                )}
+
+                  {/* WITHDRAW CASH INTERFACE */}
+                  <div className="bg-white border border-[#E2E8F0] p-5 rounded-2xl shadow-sm">
+                    <h3 style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-xs font-bold text-[#0F172A] uppercase mb-3 flex items-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-4 h-4 text-[#047857]"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-5.625 3.512A2.25 2.25 0 0 1 2.25 18V6M21.75 18.25a2.25 2.25 0 0 1-2.25 2.25H4.5M21.75 18V6c0-.98-.79-1.75-1.75-1.75H4.5" /></svg>Withdraw Money</h3>
+                    {activePlan.status === 'Active' ? (
+                      <form onSubmit={handleWithdraw} className="space-y-3">
+                        <input type="number" step="any" value={withdrawalInput} onChange={(e) => setWithdrawalInput(e.target.value)} placeholder="Amount to withdraw ($)" className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3 text-sm font-semibold text-[#0F172A]" min="0.01" max={activePlan.currentBalance} />
+                        <button type="submit" style={{ fontFamily: '"Unbounded", sans-serif' }} className="w-full py-2.5 bg-[#047857] text-white font-bold text-[10px] uppercase tracking-wider rounded-xl shadow-xs flex items-center justify-center gap-1">Confirm Withdrawal</button>
+                      </form>
+                    ) : (
+                      <p className="text-xs text-[#94A3B8] text-center py-2.5 border border-dashed border-[#E2E8F0] rounded-xl font-bold">Withdrawals closed for frozen plan.</p>
+                    )}
+                    <div className="mt-4 pt-4 border-t border-[#F1F5F9]">
+                      <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider mb-2.5">Withdrawal Logs</h4>
+                      {withdrawals.length === 0 ? (
+                        <p className="text-xs text-[#94A3B8] font-bold">No withdrawals made yet.</p>
+                      ) : (
+                        <div className="space-y-2 max-h-40 overflow-y-auto">
+                          {withdrawals.map((w) => (
+                            <div key={w.id} className="bg-[#F8FAFC] p-3 rounded-xl border border-[#E2E8F0] text-xs font-bold flex justify-between items-center"><span className="text-[#B45309]">-${w.amount.toFixed(2)}</span><span className="text-[10px] text-[#94A3B8] font-mono">{w.timestamp}</span></div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* END STATE SUMMARY PANEL DETAILS SECTION */}
+                  {activePlan.status === 'Ended' && (
+                    <div className="bg-[#E6F4EA] border border-[#A7F3D0] p-5 rounded-2xl space-y-4 shadow-xs">
+                      <h3 style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-xs font-bold text-[#065F46] uppercase flex items-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-4.5 h-4.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.03 0 1.9.793 1.993 1.81A48.226 48.226 0 0 1 18 4.084m-5.8 0A48.197 48.197 0 0 0 12 4.084m0 0c-1.135.094-1.976 1.057-1.976 2.192V16.5A2.25 2.25 0 0 0 12 18.75h.375m-9.303-3.376C1.83 14.124 1.5 13.1 1.5 12c0-4.97 4.03-9 9-9a8.96 8.96 0 0 1 5.433 1.83" /></svg>Final Plan Results</h3>
+                      <div className="space-y-3 text-sm font-bold text-[#065F46]">
+                        <div className="flex justify-between border-b border-[#A7F3D0] pb-2"><span>Account Multiplier:</span><span className="font-black">{(activePlan.currentBalance / activePlan.initialBalance).toFixed(2)}x</span></div>
+                        <div className="flex justify-between border-b border-[#A7F3D0] pb-2"><span>Total Profit Scale:</span><span className="font-black text-[#047857]">{(((activePlan.currentBalance - activePlan.initialBalance) / activePlan.initialBalance) * 100).toFixed(1)}%</span></div>
+                        <div className="flex justify-between"><span>Wins & Losses Map:</span><span className="font-black">{winsCount} Wins - {lossesCount} Losses</span></div>
+                      </div>
+                      <button onClick={() => setView('dashboard')} style={{ fontFamily: '"Unbounded", sans-serif' }} className="w-full py-2.5 bg-[#047857] text-white font-bold text-[10px] uppercase rounded-xl shadow-xs transition flex items-center justify-center gap-1">Go Back Home</button>
+                    </div>
+                  )}
+                </div>
 
               </div>
+
+              {/* --- 📈 FULL WIDTH: ACCOUNT GROWTH PROGRESS CHART --- */}
+              <div className="bg-white border border-[#E2E8F0] p-5 rounded-2xl shadow-sm w-full">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-xs font-bold text-[#0F172A] uppercase flex items-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-4 h-4 text-[#047857]"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 0 5.814-5.518l2.74-8.74m0 0-5.94 1.15m5.94-1.15-1.15 5.94M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>Account Growth Progress Chart</h3>
+                  <span className="text-[10px] text-gray-400 font-mono">Widescreen Render Mode</span>
+                </div>
+                <div className="w-full bg-[#F8FAFC] rounded-xl p-4 border border-[#E2E8F0] overflow-x-auto">
+                  <svg viewBox="0 0 1000 160" className="w-full min-w-[800px] overflow-visible">
+                    <defs>
+                      <linearGradient id="curveGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10B981" stopOpacity="0.2"/><stop offset="100%" stopColor="#10B981" stopOpacity="0.0"/></linearGradient>
+                    </defs>
+                    
+                    {/* Left Side Y Axis Scale Percentages */}
+                    <text x="45" y="34" textAnchor="end" fill="#94A3B8" className="text-[9px] font-bold font-mono">{maxGrowth.toFixed(1)}%</text>
+                    <text x="45" y="84" textAnchor="end" fill="#94A3B8" className="text-[9px] font-bold font-mono">{((maxGrowth + minGrowth)/2).toFixed(1)}%</text>
+                    <text x="45" y="134" textAnchor="end" fill="#94A3B8" className="text-[9px] font-bold font-mono">{minGrowth.toFixed(1)}%</text>
+
+                    {/* Chart Grid Lines */}
+                    <line x1="52" y1="30" x2="965" y2="30" stroke="#E2E8F0" strokeWidth="0.6" strokeDasharray="3"/>
+                    <line x1="52" y1="80" x2="965" y2="80" stroke="#E2E8F0" strokeWidth="0.6" strokeDasharray="3"/>
+                    <line x1="52" y1="130" x2="965" y2="130" stroke="#CBD5E1" strokeWidth="1"/>
+
+                    {growthHistory.length > 1 ? (
+                      <>
+                        <path d={`M 55,130 L ${chartPoints} L ${chartPoints.split(' ').pop().split(',')[0]},130 Z`} fill="url(#curveGrad)"/>
+                        <polyline fill="none" stroke="#047857" strokeWidth="3" points={chartPoints} strokeLinecap="round" strokeLinejoin="round"/>
+                        
+                        {/* Chronological X Axis Dates */}
+                        {growthHistory.map((g, idx) => {
+                          const xCoord = (idx / (growthHistory.length - 1)) * 890 + 55;
+                          const yCoord = 130 - ((g - minGrowth) / growthRange) * 100;
+                          return (
+                            <g key={idx}>
+                              <circle cx={xCoord} cy={yCoord} r="4.5" fill="#10B981" stroke="white" strokeWidth="1.5"/>
+                              <text x={xCoord} y="148" textAnchor="middle" fill="#64748B" className="text-[9px] font-bold tracking-tight">{dateLabels[idx]}</text>
+                            </g>
+                          );
+                        })}
+                      </>
+                    ) : (
+                      <text x="500" y="80" textAnchor="middle" fill="#94A3B8" className="text-xs font-bold">Log trades to see your progress graph line...</text>
+                    )}
+                  </svg>
+                </div>
+              </div>
+
+              {/* --- 📊 FULL WIDTH: ALL TRADE HISTORY LOGS --- */}
+              <div className="bg-white border border-[#E2E8F0] rounded-2xl shadow-xs overflow-hidden w-full">
+                <div className="p-4 border-b border-[#F1F5F9] bg-white flex items-center gap-2">
+                  <div className="text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0z" /></svg></div>
+                  <h3 style={{ fontFamily: '"Unbounded", sans-serif' }} className="font-bold text-xs text-[#64748B] uppercase">All Trade History Logs</h3>
+                </div>
+                {tradesHistory.length === 0 ? (
+                  <div className="p-10 text-center text-[#94A3B8] text-sm font-semibold">No trades saved yet. Click the buttons above to save your wins or losses.</div>
+                ) : (
+                  <div className="overflow-x-auto w-full">
+                    <table className="w-full text-left border-collapse min-w-[750px] text-sm md:text-base font-semibold">
+                      <thead>
+                        <tr className="bg-[#F8FAFC] text-[#64748B] border-b border-[#F1F5F9] font-bold uppercase tracking-wider text-xs">
+                          <th className="p-4">Trade #</th>
+                          <th className="p-4">Date</th>
+                          <th className="p-4">Start Balance</th>
+                          <th className="p-4">Risked</th>
+                          <th className="p-4">Ratio Result</th>
+                          <th className="p-4">Total Profit/Loss</th>
+                          <th className="p-4">End Balance</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#F1F5F9] text-[#334155]">
+                        {tradesHistory.slice().reverse().map((t) => (
+                          <tr key={t.id} className={`transition ${t.status === 'Win' ? 'bg-[#E6F4EA]/15' : 'bg-rose-50/15'}`}>
+                            <td className="p-4 text-[#94A3B8] font-bold">#{t.tradeNum}</td>
+                            <td className="p-4 text-xs font-mono text-slate-500">{t.date}</td>
+                            <td className="p-4 font-medium text-slate-600">${t.startingBalance.toFixed(2)}</td>
+                            <td className="p-4 text-rose-700/80">${t.riskAmount.toFixed(2)}</td>
+                            <td className="p-4"><span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${t.status === 'Win' ? 'bg-[#E6F4EA] text-[#065F46]' : 'bg-rose-100 text-rose-700'}`}>{t.status === 'Win' ? `WIN (1:${t.rewardRatio})` : 'LOSS'}</span></td>
+                            <td className={`p-4 font-bold ${t.totalProfitLoss > 0 ? 'text-[#047857]' : 'text-rose-700'}`}>{t.totalProfitLoss > 0 ? `+$${t.totalProfitLoss.toFixed(2)}` : `-$${Math.abs(t.totalProfitLoss).toFixed(2)}`}</td>
+                            <td className="p-4 font-bold text-[#0F172A]">${t.endingBalance.toFixed(2)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
             </div>
           )}
 
