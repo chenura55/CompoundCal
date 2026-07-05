@@ -324,6 +324,7 @@ export default function App() {
     
     const newEndingBalance = Math.round((currentBalance + payout) * 100) / 100;
     
+    // --- 📅 ASSURES FULL CHRONOLOGICAL DATE WITH THE YEAR IS ALWAYS FORMATTED CORRECTLY ---
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const now = new Date();
     const day = String(now.getDate()).padStart(2, '0');
@@ -665,7 +666,7 @@ export default function App() {
               Home Dashboard
             </button>
             <button onClick={() => setView('create')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-base transition ${view === 'create' ? 'bg-[#E6F4EA] text-[#065F46]' : 'text-[#64748B] hover:bg-[#F8FAFC]'}`}>
-              <svg xmlns="http://www.w3.org/2000/xl" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
               Create New Plan
             </button>
           </div>
@@ -1013,7 +1014,6 @@ export default function App() {
                             </td>
                             <td className="p-4 font-bold text-[#0F172A]">${t.endingBalance.toFixed(2)}</td>
                             <td className="p-4 text-center">
-                              {/* --- INTERACTIVE ACTION COLUMN ADJUSTED FOR CHRONOLOGICAL BASE --- */}
                               {idx === tradesHistory.length - 1 && activePlan.status === 'Active' ? (
                                 <button 
                                   onClick={() => handleUndoLastTrade(t.id)} 
