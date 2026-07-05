@@ -101,16 +101,12 @@ export default function App() {
   const [loginError, setLoginError] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
-  // Custom Alert Popups
   const [customAlert, setCustomAlert] = useState({ isOpen: false, type: 'info', title: '', message: '', action: null });
-  
-  // Win Ratio Selector Popup
   const [rewardSelectionModal, setRewardSelectionModal] = useState({ isOpen: false, resolve: null });
 
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [isInitialSyncDone, setIsInitialSyncDone] = useState(false);
 
-  // Sync to local storage
   useEffect(() => {
     localStorage.setItem('cp_isAuthenticated', isAuthenticated ? 'true' : 'false');
     localStorage.setItem('cp_currentView', view);
@@ -119,7 +115,6 @@ export default function App() {
     localStorage.setItem('cp_allPlans', JSON.stringify(allPlans));
   }, [isAuthenticated, view, currentUser, activePlan, allPlans]);
 
-  // Load data from Firebase on refresh
   useEffect(() => {
     const fetchStoredDataOnRefresh = async () => {
       if (isAuthenticated && currentUser) {
@@ -147,7 +142,6 @@ export default function App() {
     fetchStoredDataOnRefresh();
   }, [isAuthenticated]);
 
-  // Auto-save data to Firebase
   useEffect(() => {
     const saveToFirebase = async () => {
       if (currentUser && isAuthenticated && isInitialSyncDone) {
@@ -162,7 +156,6 @@ export default function App() {
     saveToFirebase();
   }, [allPlans, currentUser, isAuthenticated, isInitialSyncDone]);
 
-  // Session timer check
   useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -198,7 +191,6 @@ export default function App() {
     setCustomAlert(prev => ({ ...prev, isOpen: false }));
   };
 
-  // --- EXPORT TRADES TO EXCEL/CSV ---
   const handleExportSessionCSV = () => {
     if (!activePlan || tradesHistory.length === 0) {
       triggerPopupAlert('No Data', 'You do not have any trades logged in this plan yet!', 'warning');
@@ -224,7 +216,6 @@ export default function App() {
     triggerPopupAlert('Exported!', 'Your trade history has been downloaded successfully as a CSV file.', 'success');
   };
 
-  // --- LOGIN HANDLE ---
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setLoginError('');
@@ -333,10 +324,11 @@ export default function App() {
     
     const newEndingBalance = Math.round((currentBalance + payout) * 100) / 100;
     
-    // --- 📅 FORMAT DATE WITH 3-LETTER MONTH + DAY NAME ---
+    // --- 📅 FIXED DATE FORMATTING ENGINE (Outputs like: Oct 03) ---
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const now = new Date();
-    const formattedDate = `${months[now.getMonth()]} ${now.getDate()}`;
+    const day = String(now.getDate()).padStart(2, '0');
+    const formattedDate = `${months[now.getMonth()]} ${day}`;
     
     const loggedTrade = {
       id: Date.now(),
@@ -446,7 +438,6 @@ export default function App() {
   const winRatePercent = totalTradesCount > 0 ? Math.round((winsCount / totalTradesCount) * 100) : 0;
   const lossRatePercent = totalTradesCount > 0 ? Math.round((lossesCount / totalTradesCount) * 100) : 0;
 
-  // ---------------- 🔒 VIEW 1: LOGIN PAGE ----------------
   if (!isAuthenticated) {
     return (
       <div 
@@ -510,7 +501,6 @@ export default function App() {
     );
   }
 
-  // ---------------- 🎨 VIEW 2: APP MAIN INTERFACE ----------------
   return (
     <div style={{ fontFamily: '"Montserrat", sans-serif' }} className="h-screen w-full bg-[#F4F6F5] text-[#1E293B] flex flex-col md:flex-row select-none overflow-hidden relative">
       
@@ -908,15 +898,26 @@ export default function App() {
                     <div className="p-10 text-center text-[#94A3B8] text-sm font-semibold">No trades saved yet. Click the buttons above to save your wins or losses.</div>
                   ) : (
                     <div className="overflow-x-auto w-full">
-                      <table className="w-full text-left border-collapse min-w-[650px] text-sm md:text-base font-semibold">
+                      <table className="w-full text-left border-collapse min-w-[750px] text-sm md:text-base font-semibold">
                         <thead>
-                          <tr className="bg-[#F8FAFC] text-[#64748B] border-b border-[#F1F5F9] font-bold uppercase tracking-wider text-xs"><th className="p-4">Trade #</th><th className="p-4">Date</th><th className="p-4">Risked</th><th className="p-4">Ratio Result</th><th className="p-4">Payout Amount</th><th className="p-4">End Balance</th></tr>
+                          <tr className="bg-[#F8FAFC] text-[#64748B] border-b border-[#F1F5F9] font-bold uppercase tracking-wider text-xs">
+                            <th className="p-4">Trade #</th>
+                            <th className="p-4">Date</th>
+                            {/* --- ADDED STARTING BALANCE COLUMN HEADER --- */}
+                            <th className="p-4">Start Balance</th>
+                            <th className="p-4">Risked</th>
+                            <th className="p-4">Ratio Result</th>
+                            <th className="p-4">Payout Amount</th>
+                            <th className="p-4">End Balance</th>
+                          </tr>
                         </thead>
                         <tbody className="divide-y divide-[#F1F5F9] text-[#334155]">
                           {tradesHistory.slice().reverse().map((t) => (
                             <tr key={t.id} className={`transition ${t.status === 'Win' ? 'bg-[#E6F4EA]/15' : 'bg-rose-50/15'}`}>
                               <td className="p-4 text-[#94A3B8] font-bold">#{t.tradeNum}</td>
                               <td className="p-4 text-xs font-mono text-slate-500">{t.date}</td>
+                              {/* --- ADDED STARTING BALANCE COLUMN VALUE --- */}
+                              <td className="p-4 font-medium text-slate-600">${t.startingBalance.toFixed(2)}</td>
                               <td className="p-4 text-rose-700/80">${t.riskAmount.toFixed(2)}</td>
                               <td className="p-4"><span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${t.status === 'Win' ? 'bg-[#E6F4EA] text-[#065F46]' : 'bg-rose-100 text-rose-700'}`}>{t.status === 'Win' ? `WIN (1:${t.rewardRatio})` : 'LOSS'}</span></td>
                               <td className={`p-4 font-bold ${t.payout > 0 ? 'text-[#047857]' : 'text-rose-700'}`}>{t.payout > 0 ? `+$${t.payout.toFixed(2)}` : `-$${Math.abs(t.payout).toFixed(2)}`}</td>
