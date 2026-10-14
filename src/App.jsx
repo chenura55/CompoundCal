@@ -103,6 +103,7 @@ export default function App() {
   
   const [customAlert, setCustomAlert] = useState({ isOpen: false, type: 'info', title: '', message: '', action: null });
   const [rewardSelectionModal, setRewardSelectionModal] = useState({ isOpen: false, resolve: null });
+  const [manualProfitInput, setManualProfitInput] = useState(''); // ✨ NEW: manual profit amount typed in the win popup
 
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [isInitialSyncDone, setIsInitialSyncDone] = useState(false);
@@ -204,7 +205,9 @@ export default function App() {
     tradesHistory.forEach(t => {
       // Clean dates that might be missing the commas or years cleanly when parsed dynamically by external platforms
       const cleanDate = t.date.includes(',') ? t.date : `${t.date}, 2026`;
-      const row = `${t.tradeNum},"${cleanDate}",${t.startingBalance.toFixed(2)},${t.riskAmount.toFixed(2)},1:${t.rewardRatio},${t.status},${t.payout.toFixed(2)},${t.endingBalance.toFixed(2)},"${t.note.replace(/"/g, '""')}"`;
+      // ✨ Manual profit trades are labelled "Manual 1:x" in the CSV
+      const ratioLabel = t.isManual ? `Manual 1:${t.rewardRatio}` : `1:${t.rewardRatio}`;
+      const row = `${t.tradeNum},"${cleanDate}",${t.startingBalance.toFixed(2)},${t.riskAmount.toFixed(2)},${ratioLabel},${t.status},${t.payout.toFixed(2)},${t.endingBalance.toFixed(2)},"${t.note.replace(/"/g, '""')}"`;
       csvContent += row + "\n";
     });
 
@@ -300,8 +303,10 @@ export default function App() {
     setIsMobileMenuOpen(false);
   };
 
+  // ✨ Resolves with: { ratio: 1|2|3 }  OR  { manualProfit: number }  OR  null (cancelled)
   const askRewardMultiple = () => {
     return new Promise((resolve) => {
+      setManualProfitInput('');
       setRewardSelectionModal({ isOpen: true, resolve });
     });
   };
@@ -309,18 +314,29 @@ export default function App() {
   const handleExecuteCurrentTrade = async (status) => {
     if (!activePlan || activePlan.status === 'Ended') return;
     
-    let chosenRatio = 2; 
     const currentBalance = activePlan.currentBalance;
     const riskAmount = currentBalance * (activePlan.riskPercent / 100);
 
+    let choice = null;
     if (status === 'Win') {
-      chosenRatio = await askRewardMultiple();
-      if (!chosenRatio) return; 
+      choice = await askRewardMultiple();
+      if (!choice) return; 
     }
 
     let payout = 0;
+    let rewardRatio = 1;
+    let isManual = false;
+
     if (status === 'Win') {
-      payout = riskAmount * chosenRatio; 
+      if (choice.manualProfit !== undefined) {
+        // ✨ MANUAL PROFIT: user typed the exact profit amount
+        payout = Math.round(choice.manualProfit * 100) / 100;
+        rewardRatio = riskAmount > 0 ? Math.round((payout / riskAmount) * 100) / 100 : 0;
+        isManual = true;
+      } else {
+        rewardRatio = choice.ratio;
+        payout = riskAmount * rewardRatio;
+      }
     } else if (status === 'Loss') {
       payout = -riskAmount;
     }
@@ -331,6 +347,13 @@ export default function App() {
     const now = new Date();
     const day = String(now.getDate()).padStart(2, '0');
     const formattedDate = `${months[now.getMonth()]} ${day}, ${now.getFullYear()}`;
+
+    let defaultNote = 'Lost trade';
+    if (status === 'Win') {
+      defaultNote = isManual
+        ? `Won with manual profit +$${payout.toFixed(2)} (1:${rewardRatio} RR)`
+        : `Won with 1:${rewardRatio} RR`;
+    }
     
     const loggedTrade = {
       id: Date.now(),
@@ -338,11 +361,12 @@ export default function App() {
       date: formattedDate,
       startingBalance: currentBalance,
       riskAmount: riskAmount,
-      rewardRatio: status === 'Win' ? chosenRatio : 1,
+      rewardRatio: rewardRatio,
+      isManual: isManual,
       status: status,
       payout: payout,
       endingBalance: newEndingBalance,
-      note: tradeNote || (status === 'Win' ? `Won with 1:${chosenRatio} RR` : 'Lost trade')
+      note: tradeNote || defaultNote
     };
 
     const updatedHistory = [...tradesHistory, loggedTrade];
@@ -445,6 +469,12 @@ export default function App() {
   };
 
   const nextRiskAmt = (activePlan?.currentBalance || 0) * ((activePlan?.riskPercent || 20) / 100);
+
+  // ✨ Live values for the manual profit box inside the win popup
+  const manualProfitValue = parseFloat(manualProfitInput);
+  const isManualProfitValid = !isNaN(manualProfitValue) && manualProfitValue > 0;
+  const manualRRPreview = isManualProfitValid && nextRiskAmt > 0 ? Math.round((manualProfitValue / nextRiskAmt) * 100) / 100 : 0;
+  const manualBalancePreview = isManualProfitValid ? (activePlan?.currentBalance || 0) + manualProfitValue : 0;
   
   // --- CHART LOGIC VARIABLES ---
   const seedBalance = activePlan?.initialBalance || 100;
@@ -568,10 +598,10 @@ export default function App() {
         </div>
       )}
 
-      {/* RISK REWARD POPUP FOR WINNING TRADES */}
+      {/* RISK REWARD POPUP FOR WINNING TRADES (now with MANUAL PROFIT option) */}
       {rewardSelectionModal.isOpen && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs">
-          <div className="bg-white border-2 border-[#10B981] p-6 rounded-3xl w-full max-w-sm shadow-2xl text-center">
+          <div className="bg-white border-2 border-[#10B981] p-6 rounded-3xl w-full max-w-sm shadow-2xl text-center max-h-[92vh] overflow-y-auto">
             <div className="w-12 h-12 rounded-full bg-[#E6F4EA] text-[#047857] flex items-center justify-center mx-auto mb-3">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 0 5.814-5.518l2.74-8.74m0 0-5.94 1.15m5.94-1.15-1.15 5.94M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
             </div>
@@ -585,7 +615,7 @@ export default function App() {
                   <button 
                     key={ratio}
                     onClick={() => {
-                      rewardSelectionModal.resolve(ratio);
+                      rewardSelectionModal.resolve({ ratio });
                       setRewardSelectionModal({ isOpen: false, resolve: null });
                     }}
                     className="group border border-[#E2E8F0] hover:border-[#10B981] bg-[#F8FAFC] hover:bg-[#E6F4EA] p-3.5 rounded-xl transition flex justify-between items-center text-left"
@@ -599,10 +629,58 @@ export default function App() {
                 );
               })}
             </div>
+
+            {/* ✨ NEW: MANUAL PROFIT SECTION */}
+            <div className="flex items-center gap-3 my-4">
+              <div className="flex-1 h-px bg-[#E2E8F0]"></div>
+              <span className="text-[10px] font-black uppercase tracking-wider text-[#94A3B8]">OR</span>
+              <div className="flex-1 h-px bg-[#E2E8F0]"></div>
+            </div>
+
+            <div className="border border-dashed border-[#10B981] bg-[#F8FAFC] p-4 rounded-xl text-left space-y-3">
+              <div>
+                <span style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-xs font-black block text-[#1E293B]">Manual Profit</span>
+                <span className="text-[10px] font-medium text-slate-400">Type the exact profit you made (for custom ratios)</span>
+              </div>
+              <div className="relative flex items-center">
+                <span className="absolute left-3.5 text-sm font-bold text-[#047857]">$</span>
+                <input
+                  type="number"
+                  step="any"
+                  min="0.01"
+                  value={manualProfitInput}
+                  onChange={(e) => setManualProfitInput(e.target.value)}
+                  placeholder="e.g., 12.50"
+                  className="w-full bg-white border border-[#E2E8F0] rounded-xl pl-8 pr-3 py-3 text-sm font-semibold focus:outline-none focus:border-[#10B981] text-[#0F172A]"
+                />
+              </div>
+              {isManualProfitValid && (
+                <div className="flex justify-between items-center text-[11px] font-bold bg-white border border-[#E2E8F0] rounded-lg px-3 py-2">
+                  <span className="text-[#64748B]">Ratio ≈ <b className="text-[#047857]">1:{manualRRPreview}</b></span>
+                  <span className="text-[#64748B]">New Balance: <b className="text-[#0F172A]">${manualBalancePreview.toFixed(2)}</b></span>
+                </div>
+              )}
+              <button
+                disabled={!isManualProfitValid}
+                onClick={() => {
+                  if (!isManualProfitValid) return;
+                  rewardSelectionModal.resolve({ manualProfit: manualProfitValue });
+                  setRewardSelectionModal({ isOpen: false, resolve: null });
+                  setManualProfitInput('');
+                }}
+                style={{ fontFamily: '"Unbounded", sans-serif' }}
+                className={`w-full py-3 font-bold text-[10px] uppercase tracking-wider rounded-xl transition flex items-center justify-center gap-1.5 ${isManualProfitValid ? 'bg-[#047857] hover:bg-[#065F46] text-white shadow-xs' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+                Add Manual Profit
+              </button>
+            </div>
+
             <button 
               onClick={() => {
                 rewardSelectionModal.resolve(null);
                 setRewardSelectionModal({ isOpen: false, resolve: null });
+                setManualProfitInput('');
               }}
               className="mt-4 w-full text-center text-xs font-bold text-slate-400 hover:text-slate-600 transition"
             >
@@ -763,7 +841,7 @@ export default function App() {
                             <td className="p-4 md:p-5">
                               <span className="text-xs px-3 py-1 rounded-lg font-bold bg-[#E6F4EA] text-[#065F46]">{plan.riskPercent}% Risk</span>
                             </td>
-                            <td className="p-4 md:p-5 text-xs text-[#64748B] font-bold">Choose on Win (1:1 - 1:3)</td>
+                            <td className="p-4 md:p-5 text-xs text-[#64748B] font-bold">Choose on Win (1:1 - 1:3 or Manual)</td>
                             <td className="p-4 md:p-5 text-[#64748B]">${plan.initialBalance.toFixed(2)}</td>
                             <td className="p-4 md:p-5 font-bold text-[#047857]">${plan.currentBalance.toFixed(2)}</td>
                             <td className="p-4 md:p-5 text-right flex justify-end gap-2.5">
@@ -801,7 +879,7 @@ export default function App() {
                   <input type="range" min="1" max="100" value={riskPercent} onChange={(e) => setRiskPercent(e.target.value)} className="w-full accent-[#047857] cursor-pointer h-2.5 bg-gray-200 rounded-lg appearance-none" />
                   <div className="flex justify-between items-center text-xs text-[#94A3B8] font-bold pt-2 border-t border-gray-200/60">
                     <span>Reward Setup:</span>
-                    <span className="text-[#047857] font-bold">Choose 1:1, 1:2, or 1:3 on each win</span>
+                    <span className="text-[#047857] font-bold">Choose 1:1, 1:2, 1:3 or Manual profit on each win</span>
                   </div>
                 </div>
                 <button type="submit" style={{ fontFamily: '"Unbounded", sans-serif' }} className="w-full py-4 bg-[#047857] text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-xs flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 0 1-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 0 0 6.16-12.12A14.98 14.98 0 0 0 9.631 8.41m5.96 5.96a14.98 14.98 0 0 1-5.841 2.58m-.119-8.54a6 6 0 0 0-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 0 0-2.58 5.84m2.6-2.7h.01M21 3a16.3 16.3 0 0 0-3.47 3.47m0 0A16.3 16.3 0 0 0 14.06 10" /></svg>Start Plan Now</button>
@@ -898,7 +976,7 @@ export default function App() {
 
                   {/* WITHDRAW CASH INTERFACE */}
                   <div className="bg-white border border-[#E2E8F0] p-5 rounded-2xl shadow-sm">
-                    <h3 style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-xs font-bold text-[#0F172A] uppercase mb-3 flex items-center gap-1.5"><svg xmlns="http://www.w3.org/2000/xl" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-4 h-4 text-[#047857]"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-5.625 3.512A2.25 2.25 0 0 1 2.25 18V6M21.75 18.25a2.25 2.25 0 0 1-2.25 2.25H4.5M21.75 18V6c0-.98-.79-1.75-1.75-1.75H4.5" /></svg>Withdraw Money</h3>
+                    <h3 style={{ fontFamily: '"Unbounded", sans-serif' }} className="text-xs font-bold text-[#0F172A] uppercase mb-3 flex items-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-4 h-4 text-[#047857]"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-5.625 3.512A2.25 2.25 0 0 1 2.25 18V6M21.75 18.25a2.25 2.25 0 0 1-2.25 2.25H4.5M21.75 18V6c0-.98-.79-1.75-1.75-1.75H4.5" /></svg>Withdraw Money</h3>
                     {activePlan.status === 'Active' ? (
                       <form onSubmit={handleWithdraw} className="space-y-3">
                         <input type="number" step="any" value={withdrawalInput} onChange={(e) => setWithdrawalInput(e.target.value)} placeholder="Amount to withdraw ($)" className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3 text-sm font-semibold text-[#0F172A]" min="0.01" max={activePlan.currentBalance} />
@@ -1010,7 +1088,7 @@ export default function App() {
                             <td className="p-4 text-xs font-mono text-slate-500">{t.date}</td>
                             <td className="p-4 font-medium text-slate-600">${t.startingBalance.toFixed(2)}</td>
                             <td className="p-4 text-rose-700/80">${t.riskAmount.toFixed(2)}</td>
-                            <td className="p-4"><span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${t.status === 'Win' ? 'bg-[#E6F4EA] text-[#065F46]' : 'bg-rose-100 text-rose-700'}`}>{t.status === 'Win' ? `WIN (1:${t.rewardRatio})` : 'LOSS'}</span></td>
+                            <td className="p-4"><span className={`px-2.5 py-1 rounded-lg text-xs font-bold whitespace-nowrap ${t.status === 'Win' ? 'bg-[#E6F4EA] text-[#065F46]' : 'bg-rose-100 text-rose-700'}`}>{t.status === 'Win' ? (t.isManual ? `WIN (Manual 1:${t.rewardRatio})` : `WIN (1:${t.rewardRatio})`) : 'LOSS'}</span></td>
                             <td className={`p-4 font-bold ${t.payout > 0 ? 'text-[#047857]' : 'text-rose-700'}`}>
                               {t.payout > 0 ? `+$${t.payout.toFixed(2)}` : `-$${Math.abs(t.payout).toFixed(2)}`}
                             </td>
